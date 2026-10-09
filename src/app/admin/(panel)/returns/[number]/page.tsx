@@ -19,7 +19,7 @@ type LeanReturn = ReturnDoc & { _id: Types.ObjectId };
 type LeanOrderLite = { _id: Types.ObjectId; number: string; email: string; createdAt?: Date; status: string; payment?: { method?: string; status?: string }; address?: { name?: string; phone?: string; city?: string; postcode?: string }; shipment?: { deliveredAt?: Date } };
 
 const REFUND_METHOD: Record<string, string> = { original: "Original payment method", store_credit: "Store credit (gift card)", bank: "Bank transfer" };
-const PAYMENT: Record<string, string> = { cod: "Cash on delivery", razorpay: "Razorpay", stripe: "Stripe", test: "Test payment", giftcard: "Gift card" };
+const PAYMENT: Record<string, string> = { cod: "Cash on delivery", cashfree: "Cashfree", razorpay: "Razorpay", stripe: "Stripe", test: "Test payment", giftcard: "Gift card" };
 
 export default async function AdminReturn({ params }: { params: Promise<{ number: string }> }) {
   await requireAdmin("returns.manage");

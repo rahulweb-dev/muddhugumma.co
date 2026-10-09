@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "./db";
 import { Order, Product, ReturnRequest, type OrderDoc, type OrderItemDoc, type ProductDoc, type ReturnDoc, type ReturnStatus } from "./models";
 import { canonicalSize, REGION_CONFIG, sizesFor, type Region } from "./region";
+import { stockFor, stockPath } from "./stock";
 import { issueGiftCard } from "./giftcards";
 import { logActivity } from "./audit";
 import { onReturnUpdated, STORE_CREDIT_NOTE } from "./order-events";
@@ -83,7 +84,7 @@ export async function getReturnableLines(o: OrderDoc): Promise<ReturnableLine[]>
   await db();
   const slugs = [...new Set((o.items ?? []).map((i) => i.slug))];
   const [products, existing] = await Promise.all([
-    Product.find({ slug: { $in: slugs } }, { slug: 1, madeToOrder: 1, freeSize: 1, stock: 1 }).lean<Pick<ProductDoc, "slug" | "madeToOrder" | "freeSize" | "stock">[]>(),
+    Product.find({ slug: { $in: slugs } }, { slug: 1, madeToOrder: 1, freeSize: 1, stock: 1, stockUk: 1 }).lean<Pick<ProductDoc, "slug" | "madeToOrder" | "freeSize" | "stock" | "stockUk">[]>(),
     ReturnRequest.find({ orderNumber: o.number, status: { $in: OPEN_STATUSES } }, { items: 1 }).lean<Pick<ReturnDoc, "items">[]>(),
   ]);
   const bySlug = new Map(products.map((p) => [p.slug, p]));
@@ -96,7 +97,7 @@ export async function getReturnableLines(o: OrderDoc): Promise<ReturnableLine[]>
     const qty = Number(it.qty) || 1;
     const taken = Math.min(qty, used.get(key) ?? 0);
     used.set(key, (used.get(key) ?? 0) - taken); // the same slug/size on two lines shares the count
-    const stock = (p?.stock instanceof Map ? Object.fromEntries(p.stock) : p?.stock ?? {}) as Record<string, number>;
+    const stock = p ? stockFor(p, o.region) : {}; // exchanges come from the stock of the order's country
     const exchangeSizes = p ? sizesFor(!!p.freeSize, o.region).filter((s) => s !== it.size && (Number(stock[canonicalSize(s)]) || 0) > 0) : [];
     return {
       index,
@@ -262,13 +263,14 @@ export async function getReturnsForUser(userId: string): Promise<ReturnView[]> {
 const STEP: Record<ReturnStatus, number> = { requested: 0, approved: 1, pickup_scheduled: 2, picked_up: 3, received: 4, refunded: 5, exchanged: 5, rejected: 9 };
 const FINAL = new Set<ReturnStatus>(["refunded", "exchanged", "rejected"]);
 
-const restock = (items: ReturnDoc["items"], pick: (i: ReturnDoc["items"][number]) => string | undefined, sign: 1 | -1) =>
+/** Returned pieces go back into (exchanges come out of) the stock of the country the order was sold in. */
+const restock = (region: Region, items: ReturnDoc["items"], pick: (i: ReturnDoc["items"][number]) => string | undefined, sign: 1 | -1) =>
   Promise.all(
     items.map((it) => {
       const size = canonicalSize(pick(it) ?? "").replace(/[.$]/g, "");
       const qty = Math.max(0, Math.floor(Number(it.qty) || 0));
       if (!size || !qty) return null;
-      return Product.updateOne({ slug: it.slug }, { $inc: { [`stock.${size}`]: sign * qty } });
+      return Product.updateOne({ slug: it.slug }, { $inc: { [stockPath(region, size)]: sign * qty } });
     })
   );
 
@@ -334,9 +336,9 @@ export async function updateReturnStatus(
     if (!res.modifiedCount) return { ok: false, error: "Someone else just updated this return. Refresh and try again." };
 
     const everReceived = (rt.history ?? []).some((h) => h.status === "received");
-    if (status === "received" && !everReceived) await restock(rt.items, (i) => i.size, 1);
+    if (status === "received" && !everReceived) await restock(rt.region, rt.items, (i) => i.size, 1);
     // The replacement size leaves the studio when the exchange is completed.
-    if (status === "exchanged") await restock(rt.items.filter((i) => i.kind === "exchange"), (i) => i.exchangeSize, -1);
+    if (status === "exchanged") await restock(rt.region, rt.items.filter((i) => i.kind === "exchange"), (i) => i.exchangeSize, -1);
 
     await logActivity(actor, "return.status", { target: rt.number, meta: { from: rt.status, to: status, giftCard: giftCode || undefined } });
     await onReturnUpdated(returnNumber);

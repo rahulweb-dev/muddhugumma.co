@@ -6,17 +6,19 @@ import { sendEmail } from "../notify";
 import { esc, renderEmail, siteUrl } from "../email-layout";
 import { lowStockExpr, stockOf } from "../admin-data";
 
-type Row = { _id: unknown; name: string; slug: string; stock: Record<string, number> | Map<string, number> };
+type Row = { _id: unknown; name: string; slug: string; stock?: Record<string, number> | Map<string, number>; stockUk?: Record<string, number> | Map<string, number> };
 
 /** Scheduled job "low-stock": emails TEAM_EMAIL a list of live products with any size at or below the threshold. */
 export async function run(): Promise<string> {
   await db();
   const { lowStockThreshold: t } = await getSettings();
-  const rows = await Product.find({ active: true, $expr: lowStockExpr(t) }, { name: 1, slug: 1, stock: 1 }).sort({ name: 1 }).limit(500).lean<Row[]>();
+  const rows = await Product.find({ active: true, $expr: lowStockExpr(t) }, { name: 1, slug: 1, stock: 1, stockUk: 1 }).sort({ name: 1 }).limit(500).lean<Row[]>();
   if (!rows.length) return `No live product has a size at ${t} or fewer pieces.`;
 
   const lines = rows.map((p) => {
-    const low = Object.entries(stockOf(p.stock)).filter(([, v]) => v <= t);
+    const low = ([["IN", p.stock], ["UK", p.stockUk]] as const).flatMap(([r, s]) =>
+      Object.entries(stockOf(s)).filter(([, v]) => v <= t).map(([k, v]) => [`${r} ${k}`, v] as [string, number])
+    );
     return { name: p.name, id: String(p._id), low, out: low.filter(([, v]) => v === 0).length };
   });
   const outCount = lines.filter((l) => l.out).length;

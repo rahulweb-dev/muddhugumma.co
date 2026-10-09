@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "../StoreProvider";
-import { loadRazorpay, type RazorpayResponse } from "../checkout/razorpay";
-import { confirmGiftCardRazorpay, purchaseGiftCard } from "@/lib/actions/giftcards";
+import { payWithCashfree } from "../checkout/cashfree";
+import { confirmGiftCardCashfree, purchaseGiftCard } from "@/lib/actions/giftcards";
+import type { CashfreeCheckout } from "@/lib/cashfree";
 import { formatMoney, type Region } from "@/lib/region";
 
 export const GC_PRESETS: Record<Region, number[]> = { in: [1000, 2000, 5000, 10000], uk: [25, 50, 100, 200] };
@@ -34,31 +35,15 @@ export function PurchaseForm({ email: signedInEmail }: { email: string }) {
   const lim = GC_LIMITS[region];
   const amount = preset === "custom" ? Math.floor(Number(custom.replace(/[^\d]/g, "")) || 0) : preset;
 
-  async function payRazorpay(ref: string, rz: { key: string; orderId: string; amount: number; currency: string; prefill: { email: string } }) {
-    if (!(await loadRazorpay()) || !window.Razorpay) {
+  async function payCashfree(ref: string, cf: CashfreeCheckout) {
+    const res = await payWithCashfree(cf.sessionId, cf.mode);
+    if (res.status !== "done") {
       setBusy(false);
-      setError("We couldn't load Razorpay. Check your connection and try again.");
+      setError(res.status === "unavailable" ? "We couldn't load the payment window. Check your connection and try again." : `Payment not completed${res.message ? `: ${res.message}` : ""}. You haven't been charged; try again when you're ready.`);
       return;
     }
-    const rzp = new window.Razorpay({
-      key: rz.key,
-      amount: rz.amount,
-      currency: rz.currency,
-      order_id: rz.orderId,
-      name: "House of Muddhugumma",
-      description: "Gift card",
-      prefill: rz.prefill,
-      notes: { gift_card_ref: ref },
-      theme: { color: "#1B1A18" },
-      handler: async (resp: RazorpayResponse) => {
-        const res = await confirmGiftCardRazorpay(ref, resp.razorpay_order_id, resp.razorpay_payment_id, resp.razorpay_signature).catch(() => null);
-        if (res?.ok) router.push(res.redirect);
-        else router.push(`/gift-cards/thanks?ref=${ref}`);
-      },
-      modal: { ondismiss: () => { setBusy(false); setError("Payment not completed. Your card hasn't been charged; try again when you're ready."); } },
-    });
-    rzp.on("payment.failed", (e) => setError(e.error?.description ? `Payment failed: ${e.error.description}` : "Payment failed. Please try again."));
-    rzp.open();
+    const done = await confirmGiftCardCashfree(ref).catch(() => null);
+    router.push(done?.ok ? done.redirect : `/gift-cards/thanks?ref=${ref}`);
   }
 
   async function submit(e: React.FormEvent) {
@@ -83,7 +68,7 @@ export function PurchaseForm({ email: signedInEmail }: { email: string }) {
       }
       if ("redirect" in res) return router.push(res.redirect);
       if ("stripeUrl" in res) return window.location.assign(res.stripeUrl);
-      await payRazorpay(res.ref, res.razorpay);
+      await payCashfree(res.ref, res.cashfree);
     } catch {
       setError("Something went wrong. Please try again.");
       setBusy(false);
@@ -143,7 +128,7 @@ export function PurchaseForm({ email: signedInEmail }: { email: string }) {
         {busy ? "Please wait…" : amount > 0 ? `Pay ${f(amount)}` : "Choose an amount"}
       </button>
       <p className="m-0 text-center text-[12px] text-muted">
-        {region === "in" ? "Pay by UPI, card or net banking through Razorpay." : "Pay by card, Apple Pay or Google Pay through Stripe."} The card is emailed straight after payment and is valid for 12 months on {region === "in" ? "India (₹)" : "UK (£)"} orders.
+        {region === "in" ? "Pay by UPI, card or net banking through Cashfree." : "Pay by card, Apple Pay or Google Pay through Stripe."} The card is emailed straight after payment and is valid for 12 months on {region === "in" ? "India (₹)" : "UK (£)"} orders.
       </p>
     </form>
   );

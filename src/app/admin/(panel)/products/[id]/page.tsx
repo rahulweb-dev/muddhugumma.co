@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Product, type ProductDoc } from "@/lib/models";
 import { toDTO } from "@/lib/queries";
+import { stockFor } from "@/lib/stock";
 import { imagekitConfigured } from "@/lib/imagekit";
 import { productFormOptions, type ProductExtras } from "@/lib/admin-data";
 import { ProductForm } from "@/components/admin/ProductForm";
@@ -19,13 +20,14 @@ export default async function EditProductPage({ params, searchParams }: { params
   await db();
   const [doc, options] = await Promise.all([Product.findById(id).lean<ProductDoc>(), productFormOptions()]);
   if (!doc) notFound();
-  const product = toDTO(doc);
+  const product = toDTO(doc, "in"); // product.stock is India; the UK counts travel in extras.stockUk
   const extras: ProductExtras = {
     video: doc.video ?? "",
     madeToOrder: !!doc.madeToOrder,
     costPrice: doc.costPrice ?? 0,
     supplierId: doc.supplierId ?? "",
     lookbooks: [...(doc.lookbooks ?? [])],
+    stockUk: stockFor(doc, "uk"),
   };
 
   return (

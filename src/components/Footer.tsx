@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { REGION_CONFIG, type Region } from "@/lib/region";
 import { Icon, type IconName } from "./Icon";
 import { AppBar } from "./AppBar";
@@ -63,6 +64,9 @@ export async function Footer({ region }: { region: Region }) {
     <>
       <footer className="foot pad">
         <div className="fb">
+          <Link className="fb-logo" href="/" aria-label="House of Muddhugumma home">
+            <Image src="brand/logo.webp" alt="" width={72} height={72} quality={90} />
+          </Link>
           <small>HOUSE OF</small>
           <strong>Muddhugumma</strong>
           <p>{r.footerNote}</p>

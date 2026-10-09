@@ -16,7 +16,7 @@ import type { ShipmentDoc } from "@/lib/models";
 
 export const metadata: Metadata = { title: "Order" };
 
-const METHOD: Record<string, string> = { cod: "Cash on delivery", razorpay: "Razorpay", stripe: "Stripe", test: "Test payment", giftcard: "Gift card" };
+const METHOD: Record<string, string> = { cod: "Cash on delivery", cashfree: "Cashfree", razorpay: "Razorpay", stripe: "Stripe", test: "Test payment", giftcard: "Gift card" };
 
 export default async function AdminOrder({ params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin("orders.view");

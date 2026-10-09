@@ -20,7 +20,7 @@
   .gal-dots button{width:6px; height:6px; border-radius:50%; background:var(--stone-2); transition:width .25s, background .25s}
   .gal-dots button[aria-current="true"]{width:20px; border-radius:99px; background:var(--ink)}
   @media (min-width:900px){
-    .gal{display:grid; grid-template-columns:76px minmax(0,1fr); gap:14px; position:sticky; top:calc(var(--head-h) + 84px)}
+    .gal{display:grid; grid-template-columns:76px minmax(0,1fr); gap:14px; position:sticky; top:calc(var(--head-h) + 24px)}
     .gal.single{grid-template-columns:minmax(0,1fr)}
     .gal-track,.gal-dots{display:none}
     .gal-thumbs{display:flex; flex-direction:column; gap:10px; max-height:720px; overflow-y:auto; scrollbar-width:none}
@@ -273,7 +273,7 @@
 
   /* ---------- shop the look: page ---------- */
   .lk-top{display:grid; grid-template-columns:minmax(0,1fr); gap:22px; margin-top:16px}
-  @media (min-width:900px){ .lk-top{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:48px; align-items:start} .lk-hero{position:sticky; top:calc(var(--head-h,0px) + 90px)} }
+  @media (min-width:900px){ .lk-top{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:48px; align-items:start} .lk-hero{position:sticky; top:calc(var(--head-h) + 24px)} }
   .lk-hero{aspect-ratio:4/5}
   .lk-hero img{object-position:50% 20%}
   .lk-copy{display:flex; flex-direction:column; gap:12px; min-width:0}

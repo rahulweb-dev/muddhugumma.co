@@ -1,10 +1,13 @@
 "use client";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { REGION_CONFIG, type Region } from "@/lib/region";
 import { deleteAddress, saveAddress, setDefaultAddress, type ActionState } from "@/lib/actions/auth";
 import { Field, FormNotice } from "./Field";
+import { LocateButton, usePostcodeLookup, type GeoFill } from "@/components/address/AddressAutofill";
+
+const ADDRESS_KEYS = ["line1", "line2", "city", "state", "postcode"] as const;
 
 export type AddressItem = {
   id: string;
@@ -148,6 +151,27 @@ function AddressForm({
   const [region, setRegion] = useState<Region>(defaultRegion);
   const cfg = REGION_CONFIG[region];
   const uk = region === "uk";
+  const formRef = useRef<HTMLFormElement>(null);
+  // Autofilled values for a location in the other country (the fields remount on region switch).
+  const [prefill, setPrefill] = useState<Partial<Record<keyof AddressItem, string>>>({});
+
+  const field = (k: string) => formRef.current?.elements.namedItem(k) as HTMLInputElement | HTMLSelectElement | null;
+  /** Fill the address fields; with onlyEmpty, never overwrite what the shopper already typed. */
+  const applyFill = (fill: GeoFill, onlyEmpty = false): string | void => {
+    if (!fill.region) return "We deliver to India and the UK only, and that location is outside both. Please type the delivery address.";
+    if (fill.region !== region) {
+      const next: Partial<Record<keyof AddressItem, string>> = { name: field("name")?.value ?? "", phone: field("phone")?.value ?? "" };
+      for (const k of ADDRESS_KEYS) next[k] = fill[k] ?? "";
+      setPrefill(next);
+      setRegion(fill.region);
+      return;
+    }
+    for (const k of ADDRESS_KEYS) {
+      const el = field(k);
+      if (el && fill[k] && !(onlyEmpty && el.value)) el.value = fill[k];
+    }
+  };
+  const lookupPostcode = usePostcodeLookup(region, (fill) => applyFill(fill, true));
 
   useEffect(() => {
     if (state.ok) onSaved(state);
@@ -155,11 +179,11 @@ function AddressForm({
   }, [state]);
 
   // Values typed before a failed save win over the stored address.
-  const v = (k: keyof AddressItem) => state.values?.[k] ?? (address ? String(address[k] ?? "") : "");
+  const v = (k: keyof AddressItem) => prefill[k] ?? state.values?.[k] ?? (address ? String(address[k] ?? "") : "");
   const err = state.errors ?? {};
 
   return (
-    <form action={action} className="ac-panel ac-addr-form" noValidate>
+    <form ref={formRef} action={action} onSubmit={() => setPrefill({})} className="ac-panel ac-addr-form" noValidate>
       <div className="sec-head">
         <h2 className="h3">{address ? "Edit address" : "Add a new address"}</h2>
         {onCancel && (
@@ -175,13 +199,15 @@ function AddressForm({
         <legend>Deliver to</legend>
         {(["in", "uk"] as Region[]).map((r) => (
           <label key={r} className={region === r ? "on" : undefined}>
-            <input type="radio" name="region-pick" value={r} checked={region === r} onChange={() => setRegion(r)} />
+            <input type="radio" name="region-pick" value={r} checked={region === r} onChange={() => { setPrefill({}); setRegion(r); }} />
             {REGION_CONFIG[r].label}
           </label>
         ))}
       </fieldset>
 
       <FormNotice state={state.ok ? undefined : state} />
+
+      <LocateButton onFill={(fill) => applyFill(fill)} />
 
       {/* Region-specific fields remount on switch so stale values never carry across */}
       <div className="form-grid two" key={region}>
@@ -242,6 +268,7 @@ function AddressForm({
           required
           placeholder={uk ? "LE1 6RL" : "500034"}
           defaultValue={v("postcode")}
+          onChange={(e) => lookupPostcode(e.target.value)}
           hint={cfg.postHint}
           state={{ ok: false, errors: err }}
           style={uk ? { textTransform: "uppercase" } : undefined}

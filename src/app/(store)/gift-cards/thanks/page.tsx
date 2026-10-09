@@ -5,7 +5,8 @@ import { Icon } from "@/components/Icon";
 import { db } from "@/lib/db";
 import { GiftCard, type GiftCardDoc } from "@/lib/models";
 import { activatePurchasedGiftCard } from "@/lib/giftcards";
-import { razorpayConfigured, retrieveStripeSession, stripeConfigured } from "@/lib/payments";
+import { retrieveStripeSession, stripeConfigured } from "@/lib/payments";
+import { cashfreeConfigured, settleCashfree } from "@/lib/cashfree";
 import { formatMoney } from "@/lib/region";
 import "@/styles/checkout.css";
 
@@ -26,6 +27,10 @@ export default async function GiftCardThanksPage({ searchParams }: { searchParam
       const s = await retrieveStripeSession(session_id);
       if (s && s.payment_status === "paid" && s.metadata?.number === ref) card = (await activatePurchasedGiftCard(ref)) ?? card;
     }
+    // Back from Cashfree before the webhook: ask Cashfree directly.
+    if (card && !card.active && card.region === "in" && (await settleCashfree(ref, "return page").catch(() => false))) {
+      card = (await GiftCard.findOne({ orderNumber: ref }).lean<GiftCardDoc>()) ?? card;
+    }
   }
 
   if (!card || !mine) {
@@ -42,7 +47,7 @@ export default async function GiftCardThanksPage({ searchParams }: { searchParam
   }
 
   const ready = card.active;
-  const test = card.region === "in" ? !razorpayConfigured() : !stripeConfigured();
+  const test = card.region === "in" ? !cashfreeConfigured() : !stripeConfigured();
   return (
     <div className="pad wrap pb-16">
       <header className="co-thanks">

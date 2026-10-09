@@ -10,6 +10,7 @@ import { getActiveSales } from "@/lib/sales";
 import { effectivePrice } from "@/lib/pricing";
 import { Coupon, GiftCard, Order, Product, User, type ProductDoc } from "@/lib/models";
 import { REGION_CONFIG, canonicalSize, formatMoney, isRegion, sizesFor, type Region } from "@/lib/region";
+import { stockFor, stockPath } from "@/lib/stock";
 import type { Money } from "@/lib/types";
 import {
   GIFT_MESSAGE_MAX,
@@ -21,16 +22,8 @@ import {
   optionsPrice,
   toCheckoutSettings,
 } from "@/lib/checkout-pricing";
-import {
-  createRazorpayOrder,
-  createStripeCheckoutSession,
-  markAdvancePaid,
-  markOrderPaid,
-  razorpayConfigured,
-  razorpayPublicKey,
-  stripeConfigured,
-  verifyRazorpaySignature,
-} from "@/lib/payments";
+import { createStripeCheckoutSession, markAdvancePaid, markOrderPaid, stripeConfigured, verifyRazorpaySignature } from "@/lib/payments";
+import { cashfreeConfigured, createCashfreeOrder, settleCashfree, type CashfreeCheckout } from "@/lib/cashfree";
 import { findUsableGiftCard, redeemGiftCard, restoreGiftCardForOrder } from "@/lib/giftcards";
 import { reverseLoyaltyForOrder, spendPoints, unspendPoints } from "@/lib/loyalty";
 import { hasVerifiedOtp, otpDeliverable } from "@/lib/otp";
@@ -166,7 +159,7 @@ const orderSchema = z.object({
   email: z.string().trim().toLowerCase().max(120).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email address"),
   items: z.array(itemSchema).min(1, "Your bag is empty").max(30),
   address: z.record(z.string(), z.unknown()),
-  method: z.enum(["cod", "razorpay", "stripe", "partcod"]),
+  method: z.enum(["cod", "cashfree", "stripe", "partcod"]),
   coupon: trim(40).optional().default(""),
   saveAddress: z.boolean().optional().default(true),
   giftWrap: z.boolean().optional().default(false),
@@ -190,7 +183,7 @@ export type PlaceOrderResult =
   | {
       ok: true;
       number: string;
-      razorpay: { key: string; orderId: string; amount: number; currency: string; prefill: { name: string; email: string; contact: string } };
+      cashfree: CashfreeCheckout;
     }
   | { ok: true; number: string; stripeUrl: string };
 
@@ -223,10 +216,10 @@ async function setLastOrderCookie(number: string) {
   });
 }
 
-type Reserved = { id: unknown; key: string; qty: number };
+type Reserved = { id: unknown; path: string; qty: number }; // path: stockPath(region, size)
 async function releaseStock(done: Reserved[]) {
   for (const r of done) {
-    await Product.updateOne({ _id: r.id }, { $inc: { [`stock.${r.key}`]: r.qty } }).catch((e) => console.error("[checkout] stock rollback failed", e));
+    await Product.updateOne({ _id: r.id }, { $inc: { [r.path]: r.qty } }).catch((e) => console.error("[checkout] stock rollback failed", e));
   }
 }
 
@@ -249,7 +242,7 @@ const placed = async (number: string) => {
 const METHOD_NOTE: Record<string, string> = {
   cod: "cash on delivery",
   partcod: "part-paid cash on delivery",
-  razorpay: "Razorpay",
+  cashfree: "Cashfree",
   stripe: "Stripe",
 };
 
@@ -307,7 +300,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     const key = canonicalSize(it.size);
     const stockKey = `${p.slug}|${key}`;
     need.set(stockKey, (need.get(stockKey) ?? 0) + it.qty);
-    const stock = p.stock instanceof Map ? p.stock.get(key) : (p.stock as Record<string, number> | undefined)?.[key];
+    const stock = stockFor(p, region)[key];
     if ((stock ?? 0) < (need.get(stockKey) ?? 0)) {
       return { ok: false, error: (stock ?? 0) > 0 ? `Only ${stock} left of ${p.name} in ${it.size}. Lower the quantity to continue.` : `${p.name} in ${it.size} has just sold out.` };
     }
@@ -385,15 +378,13 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   /* Reserve stock atomically, line by line; roll back if any line can't be reserved. */
   const reserved: Reserved[] = [];
   for (const l of lines) {
-    const res = await Product.updateOne(
-      { _id: l.doc._id, active: true, [`stock.${l.key}`]: { $gte: l.item.qty } },
-      { $inc: { [`stock.${l.key}`]: -l.item.qty } }
-    );
+    const path = stockPath(region, l.key);
+    const res = await Product.updateOne({ _id: l.doc._id, active: true, [path]: { $gte: l.item.qty } }, { $inc: { [path]: -l.item.qty } });
     if (!res.modifiedCount) {
       await releaseStock(reserved);
       return { ok: false, error: `${l.item.name} in ${l.item.size} has just sold out. Update your bag to continue.` };
     }
-    reserved.push({ id: l.doc._id, key: l.key, qty: l.item.qty });
+    reserved.push({ id: l.doc._id, path, qty: l.item.qty });
   }
 
   /* Spend points and gift card balance atomically (guarded by the balance). */
@@ -485,7 +476,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const charge = t.payNow; // final total, or the advance for part-COD
 
   /* TEST MODE: no provider keys configured. */
-  const live = data.method === "stripe" ? stripeConfigured() : razorpayConfigured();
+  const live = data.method === "stripe" ? stripeConfigured() : cashfreeConfigured();
   if (!live) {
     if (data.method === "partcod") {
       await markAdvancePaid(number, "", testRef(), `Test payment of the ${formatMoney(charge, region)} advance: no money was taken`);
@@ -497,20 +488,17 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   }
 
   try {
-    if (data.method === "razorpay" || data.method === "partcod") {
-      const rz = await createRazorpayOrder(Math.round(charge * 100), number, data.method === "partcod" ? { kind: "cod_advance" } : {});
-      await Order.updateOne({ number }, { $set: { "payment.ref": rz.id } });
-      return {
-        ok: true,
-        number,
-        razorpay: {
-          key: razorpayPublicKey(),
-          orderId: rz.id,
-          amount: rz.amount,
-          currency: rz.currency,
-          prefill: { name: address.name, email, contact: `+91${a.phone}` },
-        },
-      };
+    if (data.method === "cashfree" || data.method === "partcod") {
+      const cashfree = await createCashfreeOrder({
+        orderId: number,
+        amount: charge,
+        customer: { name: address.name, email, phone: a.phone },
+        returnPath: `/order/${number}?cf=1`,
+        note: data.method === "partcod" ? `Advance for order ${number}` : `Order ${number}`,
+        kind: data.method === "partcod" ? "cod_advance" : "order",
+      });
+      await Order.updateOne({ number }, { $set: { "payment.ref": number } });
+      return { ok: true, number, cashfree };
     }
     const deductions = t.coupon + t.prepaid + t.loyalty + t.giftCard;
     const s = await createStripeCheckoutSession({
@@ -538,7 +526,21 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   }
 }
 
-/* ---------- Razorpay return ---------- */
+/* ---------- Cashfree return ---------- */
+
+/** Called when the Cashfree popup closes after paying. Cashfree is asked directly, so nothing from the browser is trusted. */
+export async function confirmCashfreePayment(number: string): Promise<{ ok: true; redirect: string } | { ok: false; error: string }> {
+  if (!/^MGd{6}[A-Z0-9]{4}$/.test(String(number))) return { ok: false, error: "Unknown order." };
+  const paid = await settleCashfree(number, "checkout").catch((e) => {
+    console.error("[checkout] cashfree confirm failed", e);
+    return false;
+  });
+  if (!paid) return { ok: false, error: "We couldn't confirm this payment yet. If money was taken, your order will be confirmed automatically within a few minutes." };
+  await setLastOrderCookie(number);
+  return { ok: true, redirect: `/order/${number}` };
+}
+
+/* ---------- Razorpay return (orders started before the move to Cashfree) ---------- */
 
 export async function confirmRazorpayPayment(
   number: string,

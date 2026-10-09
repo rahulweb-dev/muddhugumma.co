@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Icon } from "./Icon";
-import { Announcement, RegionPill, CountBadge, MobileMenu, SearchBox } from "./HeaderClient";
+import { Announcement, RegionPill, CountBadge, MobileMenu, SearchBox, HeadHeight } from "./HeaderClient";
 import type { Region } from "@/lib/region";
 import { activeCategories } from "@/lib/categories";
 import { getSettings } from "@/lib/settings";
@@ -42,6 +42,7 @@ export async function Header({ region }: { region: Region }) {
           ))}
         </ul>
       </nav>
+      <HeadHeight />
       <header className="head">
         <div className="head-row">
           <div className="h-left">

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { Product, StockAlert, type ProductDoc } from "@/lib/models";
 import { getRegion } from "@/lib/queries";
 import { canonicalSize } from "@/lib/region";
+import { stockFor } from "@/lib/stock";
 
 export type AlertState = { ok: boolean; message: string } | null;
 
@@ -21,13 +22,15 @@ export async function requestStockAlert(_: AlertState, form: FormData): Promise<
   const size = canonicalSize(parsed.data.size);
 
   await db();
-  const p = await Product.findOne({ slug, active: true }, { stock: 1, freeSize: 1, name: 1 }).lean<Pick<ProductDoc, "stock" | "freeSize" | "name">>();
+  const [p, region] = await Promise.all([
+    Product.findOne({ slug, active: true }, { stock: 1, stockUk: 1, freeSize: 1, name: 1 }).lean<Pick<ProductDoc, "stock" | "stockUk" | "freeSize" | "name">>(),
+    getRegion(),
+  ]);
   if (!p) return { ok: false, message: "This piece is no longer available." };
-  const stock = p.stock instanceof Map ? Object.fromEntries(p.stock) : ((p.stock as Record<string, number>) ?? {});
+  const stock = stockFor(p, region); // the shopper waits on their own country's stock
   if (!(size in stock) && !(p.freeSize && size === "Free size")) return { ok: false, message: "Please choose a size." };
   if ((stock[size] ?? 0) > 0) return { ok: false, message: "Good news: this size is in stock right now. Add it to your bag before it goes." };
 
-  const region = await getRegion();
   await StockAlert.updateOne(
     { productSlug: slug, size, email },
     { $set: { region }, $unset: { notifiedAt: "" }, $setOnInsert: { productSlug: slug, size, email } },

@@ -6,7 +6,8 @@ import type { CartLine, Money } from "./types";
 
 export type LineOptions = CartLine["options"];
 /** "partcod" = pay settings.partialCodAdvance online now, the rest in cash on delivery (India only). */
-export type PaymentMethod = "cod" | "razorpay" | "stripe" | "partcod";
+// "razorpay" stays for orders paid before the move to Cashfree; checkout no longer offers it.
+export type PaymentMethod = "cod" | "cashfree" | "razorpay" | "stripe" | "partcod";
 
 export const COUPON_KEY = "mg_coupon_v1";
 export const LAST_ORDER_COOKIE = "mg_last_order";
@@ -33,7 +34,7 @@ export function couponAmount(c: { type: string; value: number }, subtotal: numbe
   return roundMoney(Math.max(0, Math.min(raw, subtotal)), region);
 }
 
-export const methodsFor = (region: Region): PaymentMethod[] => (region === "in" ? ["razorpay", "cod", "partcod"] : ["stripe"]);
+export const methodsFor = (region: Region): PaymentMethod[] => (region === "in" ? ["cashfree", "cod", "partcod"] : ["stripe"]);
 export const isCodMethod = (m?: PaymentMethod) => m === "cod" || m === "partcod";
 
 /** The public slice of store settings that the checkout needs (passed from the server page to the client). */

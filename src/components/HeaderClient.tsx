@@ -328,3 +328,17 @@ export function MobileMenu({ nav }: { nav: { label: string; href: string; sale?:
     </>
   );
 }
+
+/** Publishes the sticky header's live height as --head-h so sticky sidebars/galleries sit just below it. */
+export function HeadHeight() {
+  useEffect(() => {
+    const head = document.querySelector<HTMLElement>(".head");
+    if (!head) return;
+    const set = () => document.documentElement.style.setProperty("--head-h", `${head.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(head);
+    return () => ro.disconnect();
+  }, []);
+  return null;
+}

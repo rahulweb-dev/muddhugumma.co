@@ -15,7 +15,6 @@ const some = (...keys: string[]) => keys.some((k) => !!process.env[k]);
 /** Live/test status of each integration from env presence only. Never reads out a secret's value. */
 function integrations(): Integration[] {
   const mm = messagingMode();
-  const rzpKey = process.env.RAZORPAY_KEY_ID ?? "";
   const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
   const missing = (...keys: string[]) => keys.filter((k) => !process.env[k]).join(", ");
 
@@ -25,13 +24,14 @@ function integrations(): Integration[] {
       ? { name: "ImageKit images", state: "partial", note: `Missing ${missing("NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT", "NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY", "IMAGEKIT_PRIVATE_KEY")}.` }
       : { name: "ImageKit images", state: "off", note: "Images load from /public/img and admin uploads are off." };
 
-  const razorpay: Integration = set("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET")
+  const cashfreeLive = process.env.CASHFREE_ENV === "production";
+  const cashfree: Integration = set("CASHFREE_APP_ID", "CASHFREE_SECRET_KEY")
     ? {
-        name: "Razorpay (India payments)",
-        state: rzpKey.startsWith("rzp_live_") ? "live" : "test",
-        note: `${rzpKey.startsWith("rzp_live_") ? "Live keys" : "Test keys (rzp_test_)"}.${process.env.RAZORPAY_WEBHOOK_SECRET ? "" : " Webhook secret missing: payments confirm only on the return page."}`,
+        name: "Cashfree (India payments)",
+        state: cashfreeLive ? "live" : "test",
+        note: cashfreeLive ? "Production keys: real money is charged." : "Sandbox keys: test payments only (set CASHFREE_ENV=production to go live).",
       }
-    : { name: "Razorpay (India payments)", state: "test", note: "No keys: India online payments are simulated." };
+    : { name: "Cashfree (India payments)", state: "test", note: "No keys: India online payments are simulated." };
 
   const stripe: Integration = stripeKey
     ? {
@@ -43,7 +43,7 @@ function integrations(): Integration[] {
 
   return [
     imagekit,
-    razorpay,
+    cashfree,
     stripe,
     {
       name: "Email (Resend)",

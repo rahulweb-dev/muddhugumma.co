@@ -4,6 +4,7 @@ import { esc, renderEmail, siteUrl } from "../email-layout";
 import { Product, StockAlert, type ProductDoc, type StockAlertDoc } from "../models";
 import { sendEmail } from "../notify";
 import { REGION_CONFIG, formatMoney, isRegion } from "../region";
+import { stockFor } from "../stock";
 
 /** Absolute image URL for emails (ImageKit when configured, the site's local copy otherwise). */
 function emailImage(path: string) {
@@ -32,13 +33,13 @@ export async function run(): Promise<string> {
       gone++;
       continue;
     }
-    const stock = p.stock instanceof Map ? Object.fromEntries(p.stock) : ((p.stock as Record<string, number>) ?? {});
-    if ((stock[a.size] ?? 0) <= 0) {
+    // Only email once the size is back in the shopper's own country.
+    const region = isRegion(a.region) ? a.region : "in";
+    if ((stockFor(p, region)[a.size] ?? 0) <= 0) {
       waiting++;
       continue;
     }
-    const region = isRegion(a.region) ? a.region : "in";
-    const url = siteUrl(`/p/${p.slug}`);
+    const url = siteUrl(`/p/${p.slug}${region === "uk" ? "?region=uk" : ""}`);
     const sizeText = a.size === "Free size" ? "" : ` in size ${esc(a.size)}${region === "uk" ? ` (UK ${({ XS: 6, S: 8, M: 10, L: 12, XL: 14, XXL: 16 } as Record<string, number>)[a.size] ?? ""})` : ""}`;
     const price = p.price?.[region]?.now;
     const img = p.images?.[0] ? emailImage(p.images[0]) : "";

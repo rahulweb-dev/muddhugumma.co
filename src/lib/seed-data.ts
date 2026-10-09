@@ -15,7 +15,7 @@ const saree = (extra: string[] = []) => [
 // Stock is kept against the canonical (India) size; UK sizes map onto it via canonicalSize().
 const sizesStock = (n = 8) => ({ XS: n, S: n, M: n, L: n, XL: n, XXL: n });
 
-export const SEED_PRODUCTS: (Seed & { stock: Record<string, number> })[] = ([
+export const SEED_PRODUCTS: (Seed & { stock: Record<string, number>; stockUk: Record<string, number> })[] = ([
   {
     slug: "magenta-raw-silk-temple-border-saree", name: "Magenta Raw Silk Temple-Border Saree", category: "sarees", collections: ["festive", "new"],
     fabric: "Raw silk", occasions: ["festive", "wedding"], colour: "pink", hex: "#C3168B", images: ["products/saree-magenta-silk.webp"],
@@ -144,7 +144,7 @@ export const SEED_PRODUCTS: (Seed & { stock: Record<string, number> })[] = ([
     description: "Classic crimson bridal lehenga with dense dabka floral work and a double dupatta. Made to your measurements.",
     details: ["Includes lehenga, blouse and two dupattas", "Made to measure in 5–6 weeks", "Free video fitting consult"], care: "Dry clean only. Store flat in a garment bag.", rating: 5, ratingCount: 12,
   },
-] satisfies Seed[]).map((p) => ({ ...p, stock: p.freeSize ? { "Free size": 12 } : sizesStock() }));
+] satisfies Seed[]).map((p) => ({ ...p, stock: p.freeSize ? { "Free size": 12 } : sizesStock(), stockUk: p.freeSize ? { "Free size": 4 } : sizesStock() }));
 
 export const SEED_COUPONS = [
   { code: "MUDDHU10", description: "10% off your first order", type: "percent", value: 10, regions: ["in", "uk"], minOrder: { in: 999, uk: 15 }, firstOrderOnly: true, active: true },

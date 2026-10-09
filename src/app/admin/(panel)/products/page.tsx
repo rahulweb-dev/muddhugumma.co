@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { Product, type ProductDoc } from "@/lib/models";
 import { toDTO } from "@/lib/queries";
+import { stockFor } from "@/lib/stock";
 import { formatMoney } from "@/lib/region";
 import { categoryLabel } from "@/lib/types";
 import { escapeRx, first, lowStockExpr, qs } from "@/lib/admin-data";
@@ -37,7 +38,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: SP
     Product.find(filter).sort(low ? { active: -1, name: 1 } : { active: -1, createdAt: -1 }).limit(500).lean<ProductDoc[]>(),
     Product.countDocuments({ active: true, $expr: lowStockExpr(t) }),
   ]);
-  const products = docs.map(toDTO);
+  const products = docs.map((d) => ({ ...toDTO(d, "in"), stockUk: stockFor(d, "uk") }));
   const base = { q, category, low: low ? "1" : undefined };
 
   return (
@@ -86,15 +87,19 @@ export default async function AdminProducts({ searchParams }: { searchParams: SP
                 <th>Category</th>
                 <th className="num">Price ₹</th>
                 <th className="num">Price £</th>
-                <th>{low ? "Low sizes" : "Stock"}</th>
+                {low ? <th>Low sizes</th> : <><th className="num">Stock IN</th><th className="num">Stock UK</th></>}
                 <th>Active</th>
                 <th aria-label="Edit" />
               </tr>
             </thead>
             <tbody>
               {products.map((p) => {
-                const total = Object.values(p.stock).reduce((a, b) => a + (Number(b) || 0), 0);
-                const lowSizes = Object.entries(p.stock).filter(([, n]) => n <= t);
+                const byRegion = [
+                  ["IN", p.stock],
+                  ["UK", p.stockUk],
+                ] as const;
+                const total = (s: Record<string, number>) => Object.values(s).reduce((a, b) => a + (Number(b) || 0), 0);
+                const lowOf = (s: Record<string, number>) => Object.entries(s).filter(([, n]) => n <= t);
                 return (
                   <tr key={p.id} className={p.active ? "" : "off"}>
                     <td>
@@ -117,11 +122,13 @@ export default async function AdminProducts({ searchParams }: { searchParams: SP
                     {low ? (
                       <td>
                         <span className="adm-sizes adm-row">
-                          {lowSizes.map(([k, v]) => <span key={k} className={v === 0 ? "out" : ""}>{k}: {v}</span>)}
+                          {byRegion.flatMap(([r, s]) => lowOf(s).map(([k, v]) => <span key={r + k} className={v === 0 ? "out" : ""}>{r} {k}: {v}</span>))}
                         </span>
                       </td>
                     ) : (
-                      <td className={`num ${lowSizes.length ? "adm-low" : ""}`} title={Object.entries(p.stock).map(([k, v]) => `${k}: ${v}`).join(", ")}>{total}</td>
+                      byRegion.map(([r, s]) => (
+                        <td key={r} className={`num ${lowOf(s).length ? "adm-low" : ""}`} title={Object.entries(s).map(([k, v]) => `${k}: ${v}`).join(", ")}>{total(s)}</td>
+                      ))
                     )}
                     <td><ActiveSwitch id={p.id} active={p.active} kind="product" label={p.name} /></td>
                     <td><Link className="adm-icon-btn" href={`/admin/products/${p.id}`} aria-label={`Edit ${p.name}`}><Icon name="edit" size={18} /></Link></td>

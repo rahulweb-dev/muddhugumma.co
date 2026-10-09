@@ -24,7 +24,8 @@ Copy `.env.example` to `.env.local` and fill in what you have.
 | MongoDB Atlas | `MONGODB_URI` | In-memory database (development only) |
 | Sessions | `AUTH_SECRET` | Dev-only secret (required in production) |
 | ImageKit | `NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT`, `NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY` | Images load from `public/img`; admin uploads are disabled |
-| Razorpay (India) | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`, `RAZORPAY_WEBHOOK_SECRET` | India online payments run in test mode |
+| Cashfree (India) | `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, `CASHFREE_ENV` (`sandbox` or `production`) | India online payments run in test mode |
+| Razorpay (legacy) | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | Only confirms payments started before the switch to Cashfree |
 | Stripe (UK) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | UK card payments run in test mode |
 
 If `npm run db:ping` fails with `querySrv ECONNREFUSED`, your router's DNS is refusing the Atlas lookup: set `MONGODB_DNS_SERVERS=8.8.8.8,1.1.1.1`.
@@ -37,7 +38,7 @@ npm run images:upload   # copies public/img/** to ImageKit (products/, brand/, b
 npm run seed            # fills an empty Atlas database (add -- --force to replace the catalogue)
 ```
 
-Webhook URLs to register: `/api/webhooks/razorpay` (event `payment.captured`) and `/api/webhooks/stripe` (event `checkout.session.completed`).
+Webhook URLs to register: `/api/webhooks/cashfree` (Cashfree dashboard → Developers → Webhooks, payment events), `/api/webhooks/razorpay` (event `payment.captured`, legacy) and `/api/webhooks/stripe` (event `checkout.session.completed`).
 
 ## Pages
 

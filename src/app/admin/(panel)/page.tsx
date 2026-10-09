@@ -17,6 +17,12 @@ const LIVE = { $nin: ["cancelled", "returned"] };
 const OPEN_RETURNS = ["requested", "approved", "pickup_scheduled", "picked_up", "received"];
 
 type RegionAgg = { _id: Region; orders: number; revenue: number };
+const lowSizes = (field: string, label: string, t: number) => ({
+  $map: {
+    input: { $filter: { input: { $objectToArray: { $ifNull: [field, {}] } }, cond: { $lte: ["$this.v", t] } } },
+    in: { k: { $concat: [`${label} `, "$this.k"] }, v: "$this.v" },
+  },
+});
 type LowStock = { _id: unknown; name: string; slug: string; images: string[]; low: { k: string; v: number }[] };
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
@@ -53,7 +59,8 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
     may("products.manage")
       ? Product.aggregate<LowStock>([
           { $match: { active: true, $expr: lowStockExpr(t) } },
-          { $project: { name: 1, slug: 1, images: 1, low: { $filter: { input: { $objectToArray: { $ifNull: ["$stock", {}] } }, cond: { $lte: ["$$this.v", t] } } } } },
+          // Low sizes from both countries, labelled "IN M" / "UK M".
+          { $project: { name: 1, slug: 1, images: 1, low: { $concatArrays: [lowSizes("$stock", "IN", t), lowSizes("$stockUk", "UK", t)] } } },
           { $sort: { name: 1 } },
           { $limit: 12 },
         ])

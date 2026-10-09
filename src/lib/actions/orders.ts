@@ -5,12 +5,14 @@ import { db } from "@/lib/db";
 import { Order, Product } from "@/lib/models";
 import { getSession } from "@/lib/auth";
 import { canonicalSize } from "@/lib/region";
+import { stockPath } from "@/lib/stock";
 import { onOrderStatusChanged } from "@/lib/order-events";
 import type { ActionState } from "@/lib/actions/auth";
 
 const CANCELLABLE = ["placed", "confirmed"];
 
 type CancelledOrder = {
+  region?: "in" | "uk";
   payment?: { method?: string; status?: string };
   items?: { productId?: string; slug?: string; size?: string; qty?: number }[];
 };
@@ -43,7 +45,7 @@ export async function cancelOrder(number: string, _prev?: ActionState, _form?: F
       const size = canonicalSize(String(it.size || "")).replace(/[.$]/g, "");
       if (!qty || !size) return null;
       const filter = it.productId && mongoose.isValidObjectId(it.productId) ? { _id: it.productId } : { slug: it.slug };
-      return Product.updateOne(filter, { $inc: { [`stock.${size}`]: qty } });
+      return Product.updateOne(filter, { $inc: { [stockPath(order.region === "uk" ? "uk" : "in", size)]: qty } });
     })
   );
   // Cancellation email, give back redeemed points and gift-card balance.

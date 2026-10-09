@@ -101,6 +101,8 @@
     .adm-grid4{grid-template-columns:repeat(4,minmax(0,1fr))}
     .adm-grid6{grid-template-columns:repeat(6,minmax(0,1fr))}
   }
+  .adm-stock{border:1px solid var(--line); padding:10px 14px 14px; margin:0; display:flex; flex-direction:column; gap:8px}
+  .adm-stock legend{padding:0 6px; font-weight:600; letter-spacing:.06em; text-transform:uppercase}
   @media (max-width:719px){ .adm-hide-sm{display:none} }
   .adm-check-pad{min-height:38px}
   .adm-filters{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; background:var(--paper); border:1px solid var(--line); padding:12px}

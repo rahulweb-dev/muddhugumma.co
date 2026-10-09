@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { Order } from "@/lib/models";
 import { LAST_ORDER_COOKIE, optionLabels } from "@/lib/checkout-pricing";
 import { markOrderPaid, retrieveStripeSession } from "@/lib/payments";
+import { settleCashfree } from "@/lib/cashfree";
 import { REGION_CONFIG, deliveryWindow, formatMoney, isRegion, shortDate, type Region } from "@/lib/region";
 import "@/styles/checkout.css";
 import { can } from "@/lib/permissions";
@@ -41,6 +42,7 @@ type LeanOrder = {
 
 const METHOD_LABEL: Record<string, string> = {
   cod: "Cash on delivery",
+  cashfree: "UPI / Card / Net banking (Cashfree)",
   razorpay: "UPI / Card / Net banking (Razorpay)",
   stripe: "Card / Apple Pay / Google Pay (Stripe)",
   test: "Test payment",
@@ -87,6 +89,11 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       await markOrderPaid(number, s.payment_intent || s.id, "Paid with Stripe", { "payment.ref": session_id });
       order = (await load(number)) ?? order;
     }
+  }
+
+  // Back from Cashfree (or reloading) before the webhook: ask Cashfree directly. Covers part-COD advances too.
+  if (order.payment?.ref === number && order.status === "placed" && (order.payment?.method === "cashfree" || order.payment?.method === "cod")) {
+    if (await settleCashfree(number, "return page").catch(() => false)) order = (await load(number)) ?? order;
   }
 
   const region: Region = isRegion(order.region) ? order.region : "in";

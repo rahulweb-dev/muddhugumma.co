@@ -8,21 +8,23 @@ import { useStore } from "../StoreProvider";
 import { useCartReady, useCoupon, useGiftCard, useLivePrices } from "./hooks";
 import { CouponBox, GiftCardBox, PriceSummary } from "./Summary";
 import { Steps } from "./Steps";
-import { loadRazorpay, type RazorpayResponse } from "./razorpay";
-import { confirmRazorpayPayment, placeOrder } from "@/lib/actions/checkout";
+import { loadCashfree, payWithCashfree } from "./cashfree";
+import { confirmCashfreePayment, placeOrder } from "@/lib/actions/checkout";
+import type { CashfreeCheckout } from "@/lib/cashfree";
 import { confirmCodOtp, requestCodOtp } from "@/lib/actions/otp";
 import { GIFT_MESSAGE_MAX, computeTotals, isCodMethod, methodsFor, optionLabels, optionsPrice, type CheckoutSettings, type PaymentMethod } from "@/lib/checkout-pricing";
 import type { ActiveSale } from "@/lib/pricing";
 import { REGION_CONFIG, formatMoney, type Region } from "@/lib/region";
+import { LocateButton, usePostcodeLookup, type GeoFill } from "../address/AddressAutofill";
 
 export type SavedAddress = { id: string; name: string; phone: string; line1: string; line2: string; city: string; state: string; postcode: string; region: Region; isDefault: boolean };
 export type CheckoutUser = { name: string; email: string; phone: string; addresses: SavedAddress[]; loyaltyPoints: number };
 
 type Addr = { name: string; phone: string; postcode: string; line1: string; line2: string; city: string; state: string };
-type RazorpayParams = { key: string; orderId: string; amount: number; currency: string; prefill: { name: string; email: string; contact: string } };
 
 const METHOD_COPY: Record<PaymentMethod, { title: string; note: string; icon: "lock" | "cash" }> = {
-  razorpay: { title: "UPI / Cards / Net banking (Razorpay)", note: "GPay, PhonePe, Paytm, RuPay, Visa, Mastercard and all major banks.", icon: "lock" },
+  cashfree: { title: "UPI / Cards / Net banking", note: "GPay, PhonePe, Paytm, RuPay, Visa, Mastercard and all major banks. Secured by Cashfree.", icon: "lock" },
+  razorpay: { title: "UPI / Cards / Net banking (Razorpay)", note: "", icon: "lock" }, // older orders only
   cod: { title: "Cash on delivery", note: "Pay in cash or UPI when your order arrives.", icon: "cash" },
   partcod: { title: "Part pay now, rest on delivery", note: "Pay a small advance by UPI or card now and the rest in cash or UPI at the door.", icon: "cash" },
   stripe: { title: "Card, Apple Pay or Google Pay (Stripe)", note: "Visa, Mastercard and Amex. You'll pay on Stripe's secure page.", icon: "lock" },
@@ -113,7 +115,7 @@ export function CheckoutClient({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<{ number: string; rz: RazorpayParams } | null>(null);
+  const [pending, setPending] = useState<{ number: string; cf: CashfreeCheckout } | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   // Region switched mid-checkout: reset the address form and payment options for the new country.
@@ -133,9 +135,9 @@ export function CheckoutClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [region]);
 
-  // Warm up Razorpay's script once the shopper reaches payment.
+  // Warm up Cashfree's script once the shopper reaches payment.
   useEffect(() => {
-    if (step === 2 && (method === "razorpay" || method === "partcod")) loadRazorpay();
+    if (step === 2 && (method === "cashfree" || method === "partcod")) loadCashfree();
   }, [step, method]);
 
   const { lines, loaded, refresh } = useLivePrices(cart, sales);
@@ -146,7 +148,7 @@ export function CheckoutClient({
   const opts = { couponDiscount: coupon.discount, giftWrap, giftCardBalance: gift.card?.balance ?? 0, settings };
   const t = computeTotals(lines, region, { ...opts, method, redeemPoints: usePoints ? points : 0 });
   const usable = computeTotals(lines, region, { ...opts, method, redeemPoints: points }); // most points this order can use
-  const online = computeTotals(lines, region, { ...opts, method: "razorpay", redeemPoints: usePoints ? points : 0 });
+  const online = computeTotals(lines, region, { ...opts, method: "cashfree", redeemPoints: usePoints ? points : 0 });
   const saved = savedFor(region);
   const showForm = sel === "new" || !saved.some((a) => a.id === sel);
   const covered = t.coveredByGiftCard;
@@ -170,10 +172,24 @@ export function CheckoutClient({
   }, [otp.resendAt]);
   const resendIn = Math.max(0, Math.ceil((otp.resendAt - now) / 1000));
 
+  /** Autofill from location or postcode; with onlyEmpty, never overwrite what the shopper already typed. */
+  const applyFill = (fill: GeoFill, onlyEmpty = false): string | void => {
+    if (fill.region !== region) return `That location isn’t in ${r.label}. Please type the delivery address, or switch region at the top of the page.`;
+    const keys = ["line1", "line2", "city", "state", "postcode"] as const;
+    setAddr((a) => {
+      const next = { ...a };
+      for (const k of keys) if (fill[k] && !(onlyEmpty && a[k])) next[k] = fill[k];
+      return next;
+    });
+    setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !keys.some((f) => k === `address.${f}` && fill[f]))));
+  };
+  const lookupPostcode = usePostcodeLookup(region, (fill) => void applyFill(fill, true));
+
   const set = (k: keyof Addr) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     let v = e.target.value;
     if (k === "postcode" && region === "uk") v = v.toUpperCase();
     if (k === "postcode" && region === "in") v = digits(v).slice(0, 6);
+    if (k === "postcode") lookupPostcode(v);
     setAddr((a) => ({ ...a, [k]: v }));
     if (errors[`address.${k}`]) setErrors(({ [`address.${k}`]: _, ...rest }) => rest);
   };
@@ -218,44 +234,28 @@ export function CheckoutClient({
     }
   }
 
-  async function openRazorpay(number: string, rz: RazorpayParams) {
-    const ok = await loadRazorpay();
-    if (!ok || !window.Razorpay) {
+  async function openCashfree(number: string, cf: CashfreeCheckout) {
+    const res = await payWithCashfree(cf.sessionId, cf.mode);
+    if (res.status === "unavailable") {
       setBusy(false);
-      setError(`We couldn't load Razorpay. Check your connection and tap “Retry payment”. Your order ${number} is saved.`);
+      setError(`We couldn't load the payment window. Check your connection and tap “Retry payment”. Your order ${number} is saved.`);
       return;
     }
-    const rzp = new window.Razorpay({
-      key: rz.key,
-      amount: rz.amount,
-      currency: rz.currency,
-      order_id: rz.orderId,
-      name: "House of Muddhugumma",
-      description: method === "partcod" ? `Advance for order ${number}` : `Order ${number}`,
-      prefill: rz.prefill,
-      notes: { order_number: number },
-      theme: { color: "#1B1A18" },
-      handler: async (resp: RazorpayResponse) => {
-        try {
-          const res = await confirmRazorpayPayment(number, resp.razorpay_order_id, resp.razorpay_payment_id, resp.razorpay_signature);
-          if (res.ok) router.push(res.redirect);
-          else {
-            setError(res.error);
-            setBusy(false);
-          }
-        } catch {
-          router.push(`/order/${number}`);
-        }
-      },
-      modal: {
-        ondismiss: () => {
-          setBusy(false);
-          setError(`Payment not completed. Your order ${number} is saved; tap “Retry payment” to pay now.`);
-        },
-      },
-    });
-    rzp.on("payment.failed", (e) => setError(e.error?.description ? `Payment failed: ${e.error.description}` : "Payment failed. Please try again."));
-    rzp.open();
+    if (res.status === "closed") {
+      setBusy(false);
+      setError(res.message ? `Payment not completed: ${res.message}. Your order ${number} is saved; tap “Retry payment” to try again.` : `Payment not completed. Your order ${number} is saved; tap “Retry payment” to pay now.`);
+      return;
+    }
+    try {
+      const done = await confirmCashfreePayment(number);
+      if (done.ok) router.push(done.redirect);
+      else {
+        setError(done.error);
+        setBusy(false);
+      }
+    } catch {
+      router.push(`/order/${number}`);
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -285,8 +285,8 @@ export function CheckoutClient({
     }
 
     setBusy(true);
-    if (pending && !covered && (method === "razorpay" || method === "partcod")) {
-      await openRazorpay(pending.number, pending.rz);
+    if (pending && !covered && (method === "cashfree" || method === "partcod")) {
+      await openCashfree(pending.number, pending.cf);
       return;
     }
     try {
@@ -295,7 +295,7 @@ export function CheckoutClient({
         email: user?.email ?? email,
         items: cart.map((l) => ({ slug: l.slug, size: l.size, qty: l.qty, options: l.options })),
         address: { ...addr },
-        method,
+        method: method === "razorpay" ? "cashfree" : method,
         coupon: coupon.discount ? coupon.code : "",
         saveAddress: !!user && sel === "new" && saveAddress,
         giftWrap,
@@ -329,8 +329,8 @@ export function CheckoutClient({
         window.location.assign(res.stripeUrl);
         return;
       }
-      setPending({ number: res.number, rz: res.razorpay });
-      await openRazorpay(res.number, res.razorpay);
+      setPending({ number: res.number, cf: res.cashfree });
+      await openCashfree(res.number, res.cashfree);
     } catch {
       setError("Something went wrong placing your order. Please try again.");
       setBusy(false);
@@ -363,7 +363,7 @@ export function CheckoutClient({
   }
 
   const err = (k: string) => errors[k];
-  const retry = !!pending && !covered && (method === "razorpay" || method === "partcod");
+  const retry = !!pending && !covered && (method === "cashfree" || method === "partcod");
   const cta =
     step === 1
       ? "Continue to payment"
@@ -431,6 +431,7 @@ export function CheckoutClient({
 
                 {showForm && (
                   <div className="form-grid two">
+                    <LocateButton onFill={(fill) => applyFill(fill)} />
                     <Field id="name" label="Full name" error={err("address.name")}>
                       <input id="co-name" autoComplete="name" value={addr.name} onChange={set("name")} aria-invalid={!!err("address.name") || undefined} />
                     </Field>
@@ -576,7 +577,7 @@ export function CheckoutClient({
                             <Icon name={METHOD_COPY[m].icon} size={16} />
                             {m === "partcod" ? `Pay ${f(settings.partialCodAdvance)} now, the rest on delivery` : METHOD_COPY[m].title}
                             {m === "cod" && r.codFee > 0 && <em className="co-fee">+{f(r.codFee)}</em>}
-                            {m === "razorpay" && online.prepaid > 0 && <em className="co-def">{settings.prepaidDiscountPct}% off</em>}
+                            {m === "cashfree" && online.prepaid > 0 && <em className="co-def">{settings.prepaidDiscountPct}% off</em>}
                           </b>
                           <span>{METHOD_COPY[m].note}</span>
                           {m === "cod" && online.prepaid > 0 && <small className="co-save">Save {f(online.prepaid)} by paying online</small>}

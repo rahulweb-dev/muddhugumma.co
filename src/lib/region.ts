@@ -149,7 +149,7 @@ export function sizesFor(freeSize: boolean, region: Region): string[] {
   return freeSize ? ["Free size"] : REGION_CONFIG[region].sizes;
 }
 
-/** UK sizes share stock with their India equivalents. */
+/** UK sizes are stored under their India equivalents (each region keeps its own counts; see lib/stock.ts). */
 const UK_TO_IN: Record<string, string> = { "UK 6": "XS", "UK 8": "S", "UK 10": "M", "UK 12": "L", "UK 14": "XL", "UK 16": "XXL" };
 export const canonicalSize = (size: string) => UK_TO_IN[size] ?? size;
 

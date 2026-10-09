@@ -7,7 +7,8 @@ import { db } from "@/lib/db";
 import { logActivity } from "@/lib/audit";
 import { onOrderStatusChanged } from "@/lib/order-events";
 import { Coupon, Lookbook, Order, Product, Supplier } from "@/lib/models";
-import { canonicalSize } from "@/lib/region";
+import { canonicalSize, type Region } from "@/lib/region";
+import { stockPath } from "@/lib/stock";
 import { ProductInputSchema, productDoc, productRuleError } from "@/lib/admin-data";
 import { allCategories } from "@/lib/categories";
 
@@ -115,14 +116,15 @@ export async function toggleProductActive(id: string, active: boolean): Promise<
 }
 
 /* ---------- orders ---------- */
-type LeanOrderItems = { number: string; status: string; items: { productId?: string; slug?: string; size?: string; qty?: number }[] };
+type LeanOrderItems = { number: string; status: string; region?: Region; items: { productId?: string; slug?: string; size?: string; qty?: number }[] };
 
-async function adjustStock(items: LeanOrderItems["items"], sign: 1 | -1) {
+/** Puts an order's pieces back into (or takes them out of) the stock of the country it was sold in. */
+async function adjustStock(items: LeanOrderItems["items"], region: Region, sign: 1 | -1) {
   await Promise.all(
     items.map((it) => {
       const n = Math.max(0, Number(it.qty) || 0) * sign;
       if (!n || !it.size) return null;
-      const key = `stock.${canonicalSize(it.size)}`;
+      const key = stockPath(region, canonicalSize(it.size));
       const filter = it.productId && validId(it.productId) ? { _id: it.productId } : { slug: it.slug };
       return Product.updateOne(filter, { $inc: { [key]: n } });
     })
@@ -135,7 +137,7 @@ export async function updateOrderStatus(orderId: string, status: string, note = 
   if (!validId(orderId)) return { ok: false, error: "Unknown order." };
   if (!(ORDER_STATUSES as readonly string[]).includes(status)) return { ok: false, error: "Choose a valid status." };
   await db();
-  const order = await Order.findById(orderId, { number: 1, status: 1, items: 1 }).lean<LeanOrderItems>();
+  const order = await Order.findById(orderId, { number: 1, status: 1, region: 1, items: 1 }).lean<LeanOrderItems>();
   if (!order) return { ok: false, error: "Order not found." };
   const cleanNote = String(note || "").trim().slice(0, 500);
   if (order.status === status && !cleanNote) return { ok: false, error: `Order is already ${status}. Add a note to log an update.` };
@@ -143,8 +145,9 @@ export async function updateOrderStatus(orderId: string, status: string, note = 
   const wasOut = RESTOCKED.has(order.status);
   const nowOut = RESTOCKED.has(status);
   // Cancelled or returned orders put their pieces back on the shelf; reopening one takes them out again.
-  if (!wasOut && nowOut) await adjustStock(order.items, 1);
-  if (wasOut && !nowOut) await adjustStock(order.items, -1);
+  const region: Region = order.region === "uk" ? "uk" : "in";
+  if (!wasOut && nowOut) await adjustStock(order.items, region, 1);
+  if (wasOut && !nowOut) await adjustStock(order.items, region, -1);
 
   await Order.updateOne(
     { _id: orderId },

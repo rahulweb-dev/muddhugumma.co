@@ -146,6 +146,7 @@ export const STATUS_LABEL: Record<string, string> = {
 
 export const PAYMENT_LABEL: Record<string, string> = {
   cod: "Cash on delivery",
+  cashfree: "Cashfree (UPI, cards, net banking)",
   razorpay: "Razorpay (UPI, cards, net banking)",
   stripe: "Card (Stripe)",
   test: "Test payment",

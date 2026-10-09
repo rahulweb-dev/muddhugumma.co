@@ -9,6 +9,7 @@ import type { ProductDTO } from "@/lib/types";
 import type { ProductExtras, ProductFormOptions } from "@/lib/admin-data";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
+const UK_LABEL: Record<(typeof SIZES)[number], string> = { XS: "UK 6", S: "UK 8", M: "UK 10", L: "UK 12", XL: "UK 14", XXL: "UK 16" };
 const COLLECTIONS = [
   { value: "bridal", label: "Bridal" },
   { value: "festive", label: "Festive" },
@@ -53,8 +54,10 @@ type FormState = {
   ukNow: string;
   ukMrp: string;
   freeSize: boolean;
-  free: string;
+  free: string; // India stock
   sizes: Record<(typeof SIZES)[number], string>;
+  freeUk: string; // UK stock
+  sizesUk: Record<(typeof SIZES)[number], string>;
   tag: string;
   origin: string;
   craft: string;
@@ -101,6 +104,9 @@ function fromProduct(p: ProductDTO | null | undefined, x: ProductExtras | null |
     freeSize: p ? p.freeSize : true,
     free: str(p?.stock["Free size"] ?? (p ? 0 : 10)),
     sizes: Object.fromEntries(SIZES.map((s) => [s, str(p?.stock[s] ?? (p ? 0 : 5))])) as FormState["sizes"],
+    // A new product starts with no UK stock, so nothing sells in the UK until it is counted in.
+    freeUk: str(x?.stockUk["Free size"] ?? 0),
+    sizesUk: Object.fromEntries(SIZES.map((s) => [s, str(x?.stockUk[s] ?? 0)])) as FormState["sizesUk"],
     tag: p?.tag ?? "",
     origin: p?.origin ?? "",
     craft: p?.craft ?? "",
@@ -219,9 +225,10 @@ export function ProductForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const stock: Record<string, number> = f.freeSize
-      ? { "Free size": num(f.free) }
-      : Object.fromEntries(SIZES.map((s) => [s, num(f.sizes[s])]));
+    const counts = (free: string, sizes: FormState["sizes"]): Record<string, number> =>
+      f.freeSize ? { "Free size": num(free) } : Object.fromEntries(SIZES.map((s) => [s, num(sizes[s])]));
+    const stock = counts(f.free, f.sizes);
+    const stockUk = counts(f.freeUk, f.sizesUk);
     const input: ProductInput = {
       id: product?.id,
       name: f.name,
@@ -236,6 +243,7 @@ export function ProductForm({
       price: { in: { now: num(f.inNow), mrp: num(f.inMrp) }, uk: { now: num(f.ukNow), mrp: num(f.ukMrp) } },
       freeSize: f.freeSize,
       stock,
+      stockUk,
       tag: f.tag,
       origin: f.origin,
       craft: f.craft,
@@ -465,27 +473,34 @@ export function ProductForm({
         <label className="check">
           <input type="checkbox" checked={f.freeSize} onChange={(e) => set("freeSize", e.target.checked)} /> Free size (sarees, dupattas)
         </label>
-        {f.freeSize ? (
-          <div className="adm-grid6">
-            <div className="field">
-              <label htmlFor="st-free">Free size</label>
-              <input id="st-free" type="number" inputMode="numeric" min={0} step={1} value={f.free} onChange={(e) => set("free", e.target.value)} />
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="adm-grid6">
-              {SIZES.map((s) => (
-                <div key={s} className="field">
-                  <label htmlFor={`st-${s}`}>{s}</label>
-                  <input id={`st-${s}`} type="number" inputMode="numeric" min={0} step={1} value={f.sizes[s]} onChange={(e) => set("sizes", { ...f.sizes, [s]: e.target.value })} />
+        <p className="muted adm-small">India and the UK hold separate stock: each site sells only its own pieces.</p>
+        {([
+          ["in", "India stock", "free", "sizes"],
+          ["uk", "UK stock", "freeUk", "sizesUk"],
+        ] as const).map(([r, title, freeKey, sizesKey]) => (
+          <fieldset key={r} className="adm-stock">
+            <legend className="adm-small">{title}</legend>
+            {f.freeSize ? (
+              <div className="adm-grid6">
+                <div className="field">
+                  <label htmlFor={`st-${r}-free`}>Free size</label>
+                  <input id={`st-${r}-free`} type="number" inputMode="numeric" min={0} step={1} value={f[freeKey]} onChange={(e) => set(freeKey, e.target.value)} />
                 </div>
-              ))}
-            </div>
-            <p className="muted adm-small">UK sizes share this stock: UK 6 = XS, UK 8 = S, UK 10 = M, UK 12 = L, UK 14 = XL, UK 16 = XXL.</p>
-          </>
-        )}
+              </div>
+            ) : (
+              <div className="adm-grid6">
+                {SIZES.map((s) => (
+                  <div key={s} className="field">
+                    <label htmlFor={`st-${r}-${s}`}>{r === "uk" ? `${s} · ${UK_LABEL[s]}` : s}</label>
+                    <input id={`st-${r}-${s}`} type="number" inputMode="numeric" min={0} step={1} value={f[sizesKey][s]} onChange={(e) => set(sizesKey, { ...f[sizesKey], [s]: e.target.value })} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </fieldset>
+        ))}
         {fe("stock")}
+        {fe("stockUk")}
       </section>
 
       <section className="adm-card">

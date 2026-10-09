@@ -54,6 +54,7 @@ export const IMPORT_COLUMNS = [
   "slug", "name", "category", "fabric", "colour", "hex", "collections", "occasions",
   "price_in", "mrp_in", "price_uk", "mrp_uk", "free_size",
   "stock_XS", "stock_S", "stock_M", "stock_L", "stock_XL", "stock_XXL", "stock_free",
+  "stock_uk_XS", "stock_uk_S", "stock_uk_M", "stock_uk_L", "stock_uk_XL", "stock_uk_XXL", "stock_uk_free",
   "tag", "origin", "craft", "description", "details", "care", "images", "video",
   "made_to_order", "cost_price", "supplier", "active",
 ] as const;

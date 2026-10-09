@@ -44,7 +44,7 @@
 .ac-nav a:hover,.ac-nav button:hover{color:var(--ink)}
 .ac-nav a[aria-current="page"]{color:var(--ink); border-color:var(--bronze)}
 @media (min-width:900px){
-  .ac-nav{margin:0; border:1px solid var(--line); position:sticky; top:calc(var(--head-h) + 96px); background:var(--paper)}
+  .ac-nav{margin:0; border:1px solid var(--line); position:sticky; top:calc(var(--head-h) + 24px); background:var(--paper)}
   .ac-nav::after{content:""; position:absolute; inset:5px; border:1px solid var(--stone-2); pointer-events:none}
   .ac-who{display:flex; gap:12px; align-items:center; padding:20px 18px; border-bottom:1px solid var(--line); background:var(--stone); min-width:0}
   .ac-who div{display:flex; flex-direction:column; min-width:0}

@@ -22,7 +22,8 @@ const ProductSchema = schema(
     images: { type: [String], default: [] }, // ImageKit paths, e.g. "products/kanchi-peacock.webp"
     price: { in: money, uk: money },
     freeSize: { type: Boolean, default: false },
-    stock: { type: Map, of: Number, default: {} }, // size -> qty
+    stock: { type: Map, of: Number, default: {} }, // India stock: size -> qty
+    stockUk: { type: Map, of: Number, default: {} }, // UK stock: size -> qty (see lib/stock.ts)
     tag: { type: String, default: "" },
     origin: { type: String, default: "" },
     craft: { type: String, default: "" },
@@ -152,7 +153,7 @@ const OrderSchema = schema(
     codFee: { type: Number, default: 0 },
     total: Number,
     payment: {
-      method: { type: String, enum: ["cod", "razorpay", "stripe", "test", "giftcard"], required: true },
+      method: { type: String, enum: ["cod", "cashfree", "razorpay", "stripe", "test", "giftcard"], required: true },
       status: { type: String, enum: ["pending", "paid", "failed", "refunded"], default: "pending" },
       ref: { type: String, default: "" },
     },
@@ -433,7 +434,7 @@ export type AddressDoc = {
 export type ProductDoc = Stamps & {
   slug: string; name: string; category: string; collections: string[]; fabric?: string; occasions: string[];
   colour: string; hex?: string; images: string[]; price: { in: MoneyDoc; uk: MoneyDoc }; freeSize?: boolean;
-  stock: Map<string, number> | Record<string, number>; tag?: string; origin?: string; craft?: string; description?: string;
+  stock: Map<string, number> | Record<string, number>; stockUk?: Map<string, number> | Record<string, number>; tag?: string; origin?: string; craft?: string; description?: string;
   details: string[]; care?: string; rating?: number; ratingCount?: number; active?: boolean;
   video?: string; madeToOrder?: boolean; costPrice?: number; supplierId?: string; lookbooks?: string[];
   blouseOptions?: boolean; legacyId?: string;
@@ -458,7 +459,7 @@ export type OrderStatus = "placed" | "confirmed" | "packed" | "shipped" | "deliv
 export type OrderDoc = Stamps & {
   number: string; userId?: string; email: string; region: RegionKey; currency: string; items: OrderItemDoc[];
   address: AddressDoc; subtotal: number; discount: number; coupon?: string; shipping: number; codFee: number; total: number;
-  payment: { method: "cod" | "razorpay" | "stripe" | "test" | "giftcard"; status: "pending" | "paid" | "failed" | "refunded"; ref?: string };
+  payment: { method: "cod" | "cashfree" | "razorpay" | "stripe" | "test" | "giftcard"; status: "pending" | "paid" | "failed" | "refunded"; ref?: string };
   status: OrderStatus; history: { status: string; at: Date; note?: string }[];
   shipment?: ShipmentDoc;
   gift?: { wrap?: boolean; message?: string; fee?: number };

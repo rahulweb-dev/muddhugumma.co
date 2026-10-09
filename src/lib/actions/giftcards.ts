@@ -8,17 +8,10 @@ import { getRegion } from "@/lib/queries";
 import { GiftCard } from "@/lib/models";
 import { formatMoney, type Region } from "@/lib/region";
 import { activatePurchasedGiftCard, createPendingGiftCard, giftCardBalance } from "@/lib/giftcards";
-import {
-  createRazorpayOrder,
-  createStripeCheckoutSession,
-  fetchRazorpayOrder,
-  razorpayConfigured,
-  razorpayPublicKey,
-  stripeConfigured,
-  verifyRazorpaySignature,
-} from "@/lib/payments";
+import { createStripeCheckoutSession, stripeConfigured } from "@/lib/payments";
+import { cashfreeConfigured, createCashfreeOrder, settleCashfree, type CashfreeCheckout } from "@/lib/cashfree";
 
-/* Buying a gift card online. Same payment paths as orders: Razorpay (India), Stripe (UK), test mode without keys. */
+/* Buying a gift card online. Same payment paths as orders: Cashfree (India), Stripe (UK), test mode without keys. */
 
 const LAST_GC_COOKIE = "mg_last_gc";
 const LIMITS: Record<Region, { min: number; max: number }> = { in: { min: 500, max: 50000 }, uk: { min: 10, max: 500 } };
@@ -42,7 +35,7 @@ export type GiftCardPurchaseInput = z.input<typeof schema>;
 export type GiftCardPurchaseResult =
   | { ok: false; error: string; fieldErrors?: Record<string, string> }
   | { ok: true; ref: string; redirect: string }
-  | { ok: true; ref: string; razorpay: { key: string; orderId: string; amount: number; currency: string; prefill: { email: string } } }
+  | { ok: true; ref: string; cashfree: CashfreeCheckout }
   | { ok: true; ref: string; stripeUrl: string };
 
 function purchaseRef() {
@@ -86,7 +79,7 @@ export async function purchaseGiftCard(input: GiftCardPurchaseInput): Promise<Gi
   await rememberPurchase(ref);
   const thanks = `/gift-cards/thanks?ref=${ref}`;
 
-  const live = region === "in" ? razorpayConfigured() : stripeConfigured();
+  const live = region === "in" ? cashfreeConfigured() : stripeConfigured();
   if (!live) {
     // TEST MODE: no provider keys configured. No money is taken.
     await activatePurchasedGiftCard(ref);
@@ -94,8 +87,15 @@ export async function purchaseGiftCard(input: GiftCardPurchaseInput): Promise<Gi
   }
   try {
     if (region === "in") {
-      const rz = await createRazorpayOrder(d.amount * 100, ref, { kind: "giftcard" });
-      return { ok: true, ref, razorpay: { key: razorpayPublicKey(), orderId: rz.id, amount: rz.amount, currency: rz.currency, prefill: { email: purchaserEmail } } };
+      const cashfree = await createCashfreeOrder({
+        orderId: ref,
+        amount: d.amount,
+        customer: { name: "", email: purchaserEmail, phone: "" },
+        returnPath: thanks,
+        note: `Gift card for ${d.recipientName}`,
+        kind: "giftcard",
+      });
+      return { ok: true, ref, cashfree };
     }
     const s = await createStripeCheckoutSession({
       number: ref,
@@ -116,14 +116,11 @@ export async function purchaseGiftCard(input: GiftCardPurchaseInput): Promise<Gi
   }
 }
 
-export async function confirmGiftCardRazorpay(ref: string, razorpayOrderId: string, razorpayPaymentId: string, razorpaySignature: string): Promise<{ ok: true; redirect: string } | { ok: false; error: string }> {
-  if (!/^GC\d{6}[A-Z0-9]{4}$/.test(String(ref))) return { ok: false, error: "Unknown purchase." };
-  if (!verifyRazorpaySignature(String(razorpayOrderId), String(razorpayPaymentId), String(razorpaySignature))) {
-    return { ok: false, error: "We couldn't verify this payment. If money was taken, your gift card will be sent automatically within a few minutes." };
-  }
-  const rz = await fetchRazorpayOrder(String(razorpayOrderId));
-  if (!rz || rz.receipt !== ref) return { ok: false, error: "This payment doesn't match your gift card." };
-  await activatePurchasedGiftCard(ref);
+/** Called when the Cashfree popup closes after paying. Cashfree is asked directly whether the card was paid for. */
+export async function confirmGiftCardCashfree(ref: string): Promise<{ ok: true; redirect: string } | { ok: false; error: string }> {
+  if (!/^GCd{6}[A-Z0-9]{4}$/.test(String(ref))) return { ok: false, error: "Unknown purchase." };
+  const paid = await settleCashfree(ref, "checkout").catch(() => false);
+  if (!paid) return { ok: false, error: "We couldn't confirm this payment yet. If money was taken, your gift card will be sent automatically within a few minutes." };
   return { ok: true, redirect: `/gift-cards/thanks?ref=${ref}` };
 }
 

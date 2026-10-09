@@ -113,6 +113,7 @@ export async function ensureInvoiceNumber(orderNumber: string): Promise<string> 
 
 const METHOD: Record<string, string> = {
   cod: "Cash on delivery",
+  cashfree: "Cashfree (UPI, cards, net banking)",
   razorpay: "Razorpay (UPI, cards, net banking)",
   stripe: "Card (Stripe)",
   test: "Test payment",

@@ -10,6 +10,7 @@ import { analyseSearch, searchMatch, type ParsedSearch } from "./search";
 import { categoryLabel, type ProductDTO, type ReviewDTO } from "./types";
 import { activeCategories, getCategory } from "./categories";
 import { tidyName } from "./seo";
+import { stockFor, stockPath } from "./stock";
 
 /** Region from cookie, else from the hosting platform's country header, else India. */
 export async function getRegion(): Promise<Region> {
@@ -20,8 +21,8 @@ export async function getRegion(): Promise<Region> {
   return country === "GB" ? "uk" : "in";
 }
 
-export function toDTO(p: ProductDoc): ProductDTO {
-  const stock = p.stock instanceof Map ? Object.fromEntries(p.stock) : ((p.stock as Record<string, number>) ?? {});
+export function toDTO(p: ProductDoc, region: Region): ProductDTO {
+  const stock = stockFor(p, region);
   return {
     id: String(p._id),
     slug: p.slug,
@@ -152,7 +153,7 @@ export async function listProducts(query: ListingQuery, region: Region): Promise
   if (query.fabric?.length) filters.push({ fabric: { $in: query.fabric } });
   if (query.colour?.length) filters.push({ colour: { $in: query.colour } });
   if (query.occasion?.length) filters.push({ occasions: { $in: query.occasion } });
-  if (query.size) filters.push({ $or: [{ freeSize: true }, { [`stock.${query.size}`]: { $gt: 0 } }] });
+  if (query.size) filters.push({ $or: [{ freeSize: true }, { [stockPath(region, query.size)]: { $gt: 0 } }] });
   const band = query.price !== undefined ? REGION_CONFIG[region].priceBands[query.price] : undefined;
   if (band) filters.push({ eff: { $gte: band.min, $lt: band.max } });
   if (query.max) filters.push({ eff: { $lt: query.max } });
@@ -187,7 +188,7 @@ export async function listProducts(query: ListingQuery, region: Region): Promise
 
   const total = res.total[0]?.n ?? 0;
   return {
-    items: res.items.map(toDTO),
+    items: res.items.map((d) => toDTO(d, region)),
     total,
     page,
     pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
@@ -263,24 +264,24 @@ export async function searchSuggest(q: string, region: Region): Promise<Suggesti
   };
 }
 
-/* ---------- products ---------- */
+/* ---------- products (stock is for the shopper's region) ---------- */
 export async function getProducts(filter: Record<string, unknown> = {}, limit = 8, sort: Record<string, 1 | -1> = { ratingCount: -1 }) {
   await db();
-  const docs = await Product.find({ active: true, ...filter }).sort(sort).limit(limit).lean<ProductDoc[]>();
-  return docs.map(toDTO);
+  const [docs, region] = await Promise.all([Product.find({ active: true, ...filter }).sort(sort).limit(limit).lean<ProductDoc[]>(), getRegion()]);
+  return docs.map((d) => toDTO(d, region));
 }
 
 export async function getProductsBySlugs(slugs: string[]) {
   if (!slugs.length) return [];
   await db();
-  const docs = await Product.find({ slug: { $in: slugs }, active: true }).lean<ProductDoc[]>();
-  return slugs.map((s) => docs.find((d) => d.slug === s)).filter(Boolean).map((d) => toDTO(d!));
+  const [docs, region] = await Promise.all([Product.find({ slug: { $in: slugs }, active: true }).lean<ProductDoc[]>(), getRegion()]);
+  return slugs.map((s) => docs.find((d) => d.slug === s)).filter(Boolean).map((d) => toDTO(d!, region));
 }
 
 export async function getProduct(slug: string): Promise<ProductFull | null> {
   await db();
-  const doc = await Product.findOne({ slug, active: true }).lean<ProductDoc>();
-  return doc ? { ...toDTO(doc), video: doc.video ?? "", madeToOrder: !!doc.madeToOrder } : null;
+  const [doc, region] = await Promise.all([Product.findOne({ slug, active: true }).lean<ProductDoc>(), getRegion()]);
+  return doc ? { ...toDTO(doc, region), video: doc.video ?? "", madeToOrder: !!doc.madeToOrder } : null;
 }
 
 export async function getRelated(p: ProductDTO, limit = 4) {
@@ -391,8 +392,8 @@ export async function getMeasurements(uid: string): Promise<Measurements | null>
 }
 
 /* ---------- feeds ---------- */
-export async function getFeedProducts(): Promise<(ProductDTO & { video: string })[]> {
+export async function getFeedProducts(region: Region): Promise<(ProductDTO & { video: string })[]> {
   await db();
   const docs = await Product.find({ active: true }).sort({ createdAt: -1 }).limit(5000).lean<ProductDoc[]>();
-  return docs.map((d) => ({ ...toDTO(d), video: d.video ?? "" }));
+  return docs.map((d) => ({ ...toDTO(d, region), video: d.video ?? "" }));
 }

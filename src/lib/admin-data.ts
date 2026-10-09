@@ -133,9 +133,11 @@ export function qs(base: Record<string, string | undefined>, over: Record<string
 /** Plain stock record from a lean product (Map or object). */
 export const stockOf = (s: unknown): Record<string, number> => (s instanceof Map ? Object.fromEntries(s) : ((s as Record<string, number>) ?? {}));
 
-/** Mongo $expr that is true when any size of a product has `threshold` pieces or fewer. */
+/** Mongo $expr that is true when any size of a product has `threshold` pieces or fewer, in India or the UK. */
 export const lowStockExpr = (threshold: number) => ({
-  $anyElementTrue: [{ $map: { input: { $objectToArray: { $ifNull: ["$stock", {}] } }, in: { $lte: ["$$this.v", threshold] } } }],
+  $anyElementTrue: [
+    { $map: { input: { $concatArrays: [{ $objectToArray: { $ifNull: ["$stock", {}] } }, { $objectToArray: { $ifNull: ["$stockUk", {}] } }] }, in: { $lte: ["$$this.v", threshold] } } },
+  ],
 });
 
 /* ---------- product input (shared by the product form, bulk upload and their actions) ---------- */
@@ -161,7 +163,8 @@ export const ProductInputSchema = z.object({
   images: z.array(z.string().trim().min(1).max(300).regex(/^[^\s]+$/, "Image paths cannot contain spaces")).max(12, "12 images at most"),
   price: z.object({ in: moneyIn, uk: moneyIn }),
   freeSize: z.boolean(),
-  stock: z.record(z.string(), qtyIn),
+  stock: z.record(z.string(), qtyIn), // India
+  stockUk: z.record(z.string(), qtyIn).default({}),
   tag: z.string().trim().max(30),
   origin: z.string().trim().max(80),
   craft: z.string().trim().max(120),
@@ -194,7 +197,10 @@ export function productRuleError(v: ProductInputParsed): { error: string; field:
 
 /** The fields written to the Product collection for a validated input. */
 export function productDoc(v: ProductInputParsed) {
-  const stock: Record<string, number> = v.freeSize ? { "Free size": v.stock["Free size"] ?? 0 } : Object.fromEntries(PRODUCT_SIZES.map((s) => [s, v.stock[s] ?? 0]));
+  const sized = (st: Record<string, number>): Record<string, number> =>
+    v.freeSize ? { "Free size": st["Free size"] ?? 0 } : Object.fromEntries(PRODUCT_SIZES.map((s) => [s, st[s] ?? 0]));
+  const stock = sized(v.stock);
+  const stockUk = sized(v.stockUk);
   return {
     name: v.name,
     slug: v.slug,
@@ -208,6 +214,7 @@ export function productDoc(v: ProductInputParsed) {
     price: v.price,
     freeSize: v.freeSize,
     stock,
+    stockUk,
     tag: v.tag,
     origin: v.origin,
     craft: v.craft,
@@ -238,7 +245,7 @@ export const stitchingItemMatch = (mtoSlugs: string[], prefix = "") => ({
 export const isStitchingItem = (it: LeanOrderItem, mto: Set<string>) => it.options?.blouse === "stitched" || !!it.stitching?.status || (!!it.slug && mto.has(it.slug));
 
 /* ---------- product form options ---------- */
-export type ProductExtras = { video: string; madeToOrder: boolean; costPrice: number; supplierId: string; lookbooks: string[] };
+export type ProductExtras = { video: string; madeToOrder: boolean; costPrice: number; supplierId: string; lookbooks: string[]; stockUk: Record<string, number> };
 export type ProductFormOptions = {
   suppliers: { id: string; name: string }[];
   lookbooks: { slug: string; title: string; active: boolean }[];
@@ -262,7 +269,7 @@ export async function productFormOptions(): Promise<ProductFormOptions> {
 /* ---------- product <-> CSV ---------- */
 type ProductLike = {
   slug: string; name: string; category: string; collections?: string[]; fabric?: string; occasions?: string[]; colour?: string; hex?: string;
-  images?: string[]; price?: { in?: { now?: number; mrp?: number }; uk?: { now?: number; mrp?: number } }; freeSize?: boolean; stock?: unknown;
+  images?: string[]; price?: { in?: { now?: number; mrp?: number }; uk?: { now?: number; mrp?: number } }; freeSize?: boolean; stock?: unknown; stockUk?: unknown;
   tag?: string; origin?: string; craft?: string; description?: string; details?: string[]; care?: string; active?: boolean;
   video?: string; madeToOrder?: boolean; costPrice?: number; supplierId?: string; lookbooks?: string[]; blouseOptions?: boolean;
 };
@@ -282,6 +289,7 @@ export function productToInput(p: ProductLike): ProductInputParsed {
     price: { in: { now: p.price?.in?.now ?? 0, mrp: p.price?.in?.mrp ?? 0 }, uk: { now: p.price?.uk?.now ?? 0, mrp: p.price?.uk?.mrp ?? 0 } },
     freeSize: !!p.freeSize,
     stock: stockOf(p.stock),
+    stockUk: stockOf(p.stockUk),
     tag: p.tag ?? "",
     origin: p.origin ?? "",
     craft: p.craft ?? "",
@@ -301,11 +309,13 @@ export function productToInput(p: ProductLike): ProductInputParsed {
 /** One CSV row (in IMPORT_COLUMNS order) for a stored product. */
 export function productCsvRow(p: ProductLike, supplierName = ""): (string | number)[] {
   const s = stockOf(p.stock);
+  const u = stockOf(p.stockUk);
   const list = (a?: string[]) => (a ?? []).join("|");
   return [
     p.slug, p.name, p.category, p.fabric ?? "", p.colour ?? "", p.hex ?? "", list(p.collections), list(p.occasions),
     p.price?.in?.now ?? 0, p.price?.in?.mrp ?? 0, p.price?.uk?.now ?? 0, p.price?.uk?.mrp ?? 0, p.freeSize ? "true" : "false",
     ...PRODUCT_SIZES.map((k) => (p.freeSize ? "" : s[k] ?? 0)), p.freeSize ? s["Free size"] ?? 0 : "",
+    ...PRODUCT_SIZES.map((k) => (p.freeSize ? "" : u[k] ?? 0)), p.freeSize ? u["Free size"] ?? 0 : "",
     p.tag ?? "", p.origin ?? "", p.craft ?? "", p.description ?? "", list(p.details), p.care ?? "", list(p.images), p.video ?? "",
     p.madeToOrder ? "true" : "false", p.costPrice ?? 0, supplierName, p.active === false ? "false" : "true",
   ];
@@ -331,7 +341,7 @@ const KNOWN = new Set(IMPORT_COLUMNS.map((c) => c.toLowerCase()));
 const REQUIRED_FOR_CREATE = ["name", "category", "price_in", "price_uk"];
 const FIELD_LABEL: Record<string, string> = {
   name: "name", slug: "slug", category: "category", collections: "collections", fabric: "fabric", occasions: "occasions", colour: "colour", hex: "hex",
-  images: "images", price: "price", freeSize: "free_size", stock: "stock", tag: "tag", origin: "origin", craft: "craft", description: "description",
+  images: "images", price: "price", freeSize: "free_size", stock: "stock", stockUk: "stock_uk", tag: "tag", origin: "origin", craft: "craft", description: "description",
   details: "details", care: "care", active: "active", video: "video", madeToOrder: "made_to_order", costPrice: "cost_price", supplierId: "supplier", lookbooks: "lookbooks",
 };
 
@@ -405,7 +415,7 @@ export async function analyseImport(csv: string): Promise<{ ok: false; error: st
       ? productToInput(current)
       : {
           name: "", slug, category: "sarees", collections: [], fabric: "", occasions: [], colour: "red", hex: "", images: [],
-          price: { in: { now: 0, mrp: 0 }, uk: { now: 0, mrp: 0 } }, freeSize: false, stock: {}, tag: "", origin: "", craft: "",
+          price: { in: { now: 0, mrp: 0 }, uk: { now: 0, mrp: 0 } }, freeSize: false, stock: {}, stockUk: {}, tag: "", origin: "", craft: "",
           description: "", details: [], care: "", active: true, video: "", madeToOrder: false, costPrice: 0, supplierId: "", lookbooks: [], blouseOptions: false,
         };
     v.slug = slug;
@@ -459,11 +469,13 @@ export async function analyseImport(csv: string): Promise<{ ok: false; error: st
     bool("made_to_order", (b) => (v.madeToOrder = b));
     bool("active", (b) => (v.active = b));
 
-    // Stock: blank keeps the current count (or 0 for a new product).
-    const stock = { ...v.stock };
-    for (const size of PRODUCT_SIZES) num(`stock_${size.toLowerCase()}`, (n) => (stock[size] = n), { int: true });
-    num("stock_free", (n) => (stock["Free size"] = n), { int: true });
-    v.stock = stock;
+    // Stock: blank keeps the current count (or 0 for a new product). stock_* is India, stock_uk_* the UK.
+    for (const [prefix, key] of [["stock", "stock"], ["stock_uk", "stockUk"]] as const) {
+      const stock = { ...v[key] };
+      for (const size of PRODUCT_SIZES) num(`${prefix}_${size.toLowerCase()}`, (n) => (stock[size] = n), { int: true });
+      num(`${prefix}_free`, (n) => (stock["Free size"] = n), { int: true });
+      v[key] = stock;
+    }
 
     // Hex: blank on a new product (or an invalid stored value) falls back to the colour family's swatch.
     if (given("hex")) v.hex = cell("hex").startsWith("#") ? cell("hex") : `#${cell("hex")}`;
@@ -486,7 +498,7 @@ export async function analyseImport(csv: string): Promise<{ ok: false; error: st
     if (!res.success) {
       for (const issue of res.error.issues) {
         const key = String(issue.path[0] ?? "");
-        const col = key === "price" ? `${issue.path[2] === "mrp" ? "mrp" : "price"}_${String(issue.path[1])}` : key === "stock" ? `stock_${String(issue.path[1]).replace("Free size", "free")}` : FIELD_LABEL[key] ?? key;
+        const col = key === "price" ? `${issue.path[2] === "mrp" ? "mrp" : "price"}_${String(issue.path[1])}` : key === "stock" || key === "stockUk" ? `${key === "stock" ? "stock" : "stock_uk"}_${String(issue.path[1]).replace("Free size", "free")}` : FIELD_LABEL[key] ?? key;
         const msg = `${col}: ${issue.message}`;
         if (!errors.includes(msg)) errors.push(msg);
       }

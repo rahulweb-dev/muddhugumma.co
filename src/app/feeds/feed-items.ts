@@ -33,7 +33,7 @@ const amount = (n: number, region: Region) => (region === "in" ? `${Math.round(n
 const clean = (s: string) => s.replace(/\s+/g, " ").trim();
 
 export async function feedItems(region: Region): Promise<FeedItem[]> {
-  const [products, sales] = await Promise.all([getFeedProducts(), getActiveSales()]);
+  const [products, sales] = await Promise.all([getFeedProducts(region), getActiveSales()]);
   const out: FeedItem[] = [];
   for (const p of products) {
     if (!p.images.length) continue;

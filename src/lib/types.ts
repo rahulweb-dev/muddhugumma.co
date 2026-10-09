@@ -15,6 +15,7 @@ export type ProductDTO = {
   images: string[];
   price: Record<Region, Money>;
   freeSize: boolean;
+  /** Stock for the region the DTO was built for (India and the UK hold separate stock). */
   stock: Record<string, number>;
   tag: string;
   origin: string;

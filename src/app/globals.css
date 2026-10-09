@@ -30,7 +30,7 @@
     --paper:var(--color-paper); --stone:var(--color-stone); --stone-2:var(--color-stone-2); --ink:var(--color-ink); --muted:var(--color-muted); --line:var(--color-line);
     --bronze:var(--color-bronze); --cocoa:var(--color-cocoa); --sale:var(--color-sale); --ok:var(--color-ok); --on:#FFFFFF;
     --display:var(--font-display); --body:var(--font-body); --serif:var(--font-serif); --script:var(--font-script);
-    --gutter:16px;
+    --gutter:16px; --head-h:72px;
     color-scheme:light;
   }
   @media (min-width:720px){ :root{ --gutter:32px } }
@@ -241,6 +241,12 @@
   }
   .foot{background:var(--ink); color:#D9D3C9; padding-block:40px 100px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:30px 16px; font-size:13px}
   .foot .fb{grid-column:1/-1; display:flex; flex-direction:column; gap:10px}
+  .geo-locate{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px}
+  .geo-locate .btn{gap:8px}
+  .geo-or{font-size:12.5px; color:var(--muted)}
+  .geo-locate p{flex-basis:100%; margin:0}
+  .foot .fb-logo{display:inline-flex; align-self:flex-start; margin-bottom:4px}
+  .foot .fb-logo img{width:72px; height:72px; border-radius:50%; object-fit:cover; background:#fff; border:1px solid rgba(255,255,255,.15)}
   .foot .fb strong{font-family:var(--script); font-weight:400; font-size:38px; color:#E9D9BF; line-height:1}
   .foot .fb small{font-family:var(--display); letter-spacing:.38em; font-size:9.5px; color:#9C958A}
   .foot .fb p{margin:0; color:#9C958A; max-width:38ch}
