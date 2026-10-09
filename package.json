@@ -12,6 +12,7 @@
     "images:upload": "node --env-file-if-exists=.env.local scripts/upload-images.mjs",
     "db:ping": "node --env-file-if-exists=.env.local scripts/ping-db.mjs",
     "stock:split": "node --env-file-if-exists=.env.local scripts/split-stock.mjs",
+    "slugs:clean": "node --env-file-if-exists=.env.local scripts/clean-slugs.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

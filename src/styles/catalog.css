@@ -167,6 +167,17 @@
   .look-pick[aria-busy="true"]{opacity:.6}
   @media (max-width:719px){ .look-pick{flex-direction:column; align-items:stretch; gap:8px} }
 
+  /* ---------- guide + FAQs under the grid ---------- */
+  .plp-guide{display:grid; grid-template-columns:minmax(0,1fr); gap:28px; margin:48px 0 24px; padding-top:32px; border-top:1px solid var(--line)}
+  .plp-guide p{color:var(--muted); line-height:1.7; margin:10px 0 0; max-width:62ch}
+  .plp-faq details{border-bottom:1px solid var(--line)}
+  .plp-faq summary{list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 0; font-weight:600; font-size:14px}
+  .plp-faq summary::-webkit-details-marker{display:none}
+  .plp-faq summary svg{flex:none; color:var(--muted); transition:transform .25s}
+  .plp-faq details[open] summary svg{transform:rotate(45deg)}
+  .plp-faq details p{margin:0 0 14px; font-size:14px}
+  @media (min-width:900px){ .plp-guide{grid-template-columns:1fr 1fr; gap:56px} }
+
   /* ---------- grid + pagination ---------- */
   .plp-more{display:flex; flex-direction:column; align-items:center; gap:14px; margin-top:28px; text-align:center}
   .plp-more p{margin:0; font-size:13px; color:var(--muted)}

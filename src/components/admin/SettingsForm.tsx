@@ -106,7 +106,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
         <div className="form-grid two">
           {F({ k: "legalName", label: "Legal name" })}
           {F({ k: "supportEmail", label: "Customer care email", type: "email" })}
-          {F({ k: "gstin", label: "GSTIN", hint: "Printed on Indian invoices. Leave empty until registered." })}
+          {F({ k: "gstin", label: "GSTIN", hint: "Leave empty until you are GST registered: invoices then show no GST. Once set, GST is calculated and printed on every Indian invoice." })}
           {F({ k: "stateCode", label: "GST state code", hint: "36 = Telangana. Decides CGST+SGST vs IGST." })}
           {F({ k: "ukVatNumber", label: "UK VAT number", hint: "Optional, e.g. GB123456789" })}
           {F({ k: "address", label: "Registered address", wide: true })}

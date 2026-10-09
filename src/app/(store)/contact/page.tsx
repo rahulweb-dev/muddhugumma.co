@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/Icon";
 import { ContactForm } from "@/components/contact/ContactForm";
@@ -9,10 +10,14 @@ import { getRegion } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 import { CONTACT_TOPICS } from "@/lib/contact";
 
-export const metadata: Metadata = {
-  title: "Contact us",
-  description: "Message House of Muddhugumma about an order, sizing, returns or bridal pieces. We reply within one working day.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta({
+    title: "Contact us",
+    description: "Message House of Muddhugumma about an order, sizing, returns or bridal pieces, by WhatsApp, email or phone. We reply within one working day.",
+    path: "/contact",
+    kicker: "We're here to help",
+  });
+}
 
 const HELP: { href: string; label: string; note: string; icon: IconName }[] = [
   { href: "/track", label: "Track an order", note: "Where's my parcel?", icon: "truck" },

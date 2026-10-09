@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 import { Icon } from "@/components/Icon";
 import { ProductCard } from "@/components/ProductCard";
@@ -20,8 +20,9 @@ import "@/styles/product.css";
 import { TrackOnMount } from "@/components/analytics/TrackOnMount";
 import { reviewEligibility, type ReviewEligibility } from "@/lib/reviews";
 import { db } from "@/lib/db";
-import { Coupon, type CouponDoc } from "@/lib/models";
+import { Coupon, Product, type CouponDoc } from "@/lib/models";
 import { absImage, absUrl, breadcrumbLd, BRAND, ldJson } from "@/lib/seo";
+import { pageMeta, productKeywords, regionPath } from "@/lib/seo-meta";
 
 type Params = Promise<{ slug: string }>;
 
@@ -40,14 +41,23 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const [region, sales] = await Promise.all([getRegion(), getActiveSales()]);
   const cat = categoryLabel(p.category).toLowerCase();
   const lead = [p.fabric && !p.name.toLowerCase().includes(p.fabric.toLowerCase()) ? `In ${p.fabric.toLowerCase()}` : "", `${formatMoney(effectivePrice(p, region, sales).now, region)}`].filter(Boolean).join(", ");
-  const desc = `${p.name}. ${lead}. ${p.description || `Shop ${cat} at ${BRAND}, delivered across India and the UK.`}`.slice(0, 158);
-  return {
-    title: p.name.length > 65 ? `${p.name.slice(0, 62).replace(/[\s,]+\S*$/, "")}…` : p.name,
+  const where = region === "uk" ? "Delivered across the UK, duties included." : "Free shipping above ₹1,999, COD available.";
+  const desc = `${p.name}. ${lead}. ${p.description ? `${p.description} ` : ""}Buy ${cat} online ${region === "uk" ? "in the UK" : "in India"} at ${BRAND}. ${where}`;
+  const name = p.name.length > 55 ? `${p.name.slice(0, 52).replace(/[\s,]+\S*$/, "")}…` : p.name;
+  const meta = await pageMeta({
+    title: { in: `${name} | Buy Online India`, uk: `${name} | Buy Online UK` },
     description: desc,
-    alternates: { canonical: `/p/${p.slug}` },
-    openGraph: { title: p.name, description: desc, type: "website", images: p.images[0] ? [{ url: imageUrl(p.images[0]), alt: p.name }] : undefined },
-    twitter: { card: "summary_large_image", title: p.name, description: desc, images: p.images[0] ? [imageUrl(p.images[0])] : undefined },
-  };
+    keywords: productKeywords(p, categoryLabel(p.category), region),
+    path: `/p/${p.slug}`,
+    kicker: categoryLabel(p.category),
+    image: p.images[0],
+    price: formatMoney(effectivePrice(p, region, sales).now, region),
+    region,
+  });
+  // The branded card first, then the product photo itself (Pinterest and Google Images prefer the real photo).
+  const photo = p.images[0] ? [{ url: imageUrl(p.images[0]), width: 1200, alt: p.name }] : [];
+  const cards = Array.isArray(meta.openGraph?.images) ? meta.openGraph.images : [];
+  return { ...meta, openGraph: { ...meta.openGraph, images: [...cards, ...photo] } };
 }
 
 function Stars({ value, size = 14 }: { value: number; size?: number }) {
@@ -189,10 +199,16 @@ function Reviews({ p, reviews, can }: { p: ProductDTO; reviews: ReviewWithPhotos
   );
 }
 
-export default async function ProductPage({ params }: { params: Params }) {
+export default async function ProductPage({ params, searchParams }: { params: Params; searchParams: Promise<{ region?: string }> }) {
   const { slug } = await params;
   const p = await load(slug);
-  if (!p) notFound();
+  if (!p) {
+    // A renamed product: send old links (and search engines) to the new URL for good.
+    await db();
+    const moved = await Product.findOne({ oldSlugs: slug, active: true }, { slug: 1 }).lean<{ slug: string }>();
+    if (moved) permanentRedirect(`/p/${moved.slug}${(await searchParams).region === "uk" ? "?region=uk" : ""}`);
+    notFound();
+  }
   const [region, sales, session] = await Promise.all([getRegion(), getActiveSales(), getSession()]);
   const r = REGION_CONFIG[region];
   const [reviews, related, look, bundles, saved] = await Promise.all([
@@ -235,13 +251,31 @@ export default async function ProductPage({ params }: { params: Params }) {
       : {}),
     offers: {
       "@type": "Offer",
-      url: absUrl(`/p/${p.slug}`),
+      url: absUrl(regionPath(`/p/${p.slug}`, region)),
       priceCurrency: r.currency,
       price: priceNow.now,
       ...(priceNow.sale ? { priceValidUntil: priceNow.sale.endsAt.slice(0, 10) } : {}),
       availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       itemCondition: "https://schema.org/NewCondition",
       seller: { "@type": "Organization", name: BRAND },
+      // Delivery and returns for this country, shown by Google in Shopping results.
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: region === "uk" ? "GB" : "IN" },
+        shippingRate: { "@type": "MonetaryAmount", value: priceNow.now >= r.freeShippingAt ? 0 : r.shippingFee, currency: r.currency },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 2, unitCode: "DAY" },
+          transitTime: { "@type": "QuantitativeValue", minValue: r.eta[0], maxValue: r.eta[1], unitCode: "DAY" },
+        },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: region === "uk" ? "GB" : "IN",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: r.returnsDays,
+        returnMethod: "https://schema.org/ReturnByMail",
+      },
     },
   };
   const crumbsLd = breadcrumbLd([["Home", "/"], [catLabel, `/c/${p.category}`], [p.name, `/p/${p.slug}`]]);

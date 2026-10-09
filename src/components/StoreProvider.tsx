@@ -6,6 +6,7 @@ import type { CartLine, ProductDTO } from "@/lib/types";
 import { setRegionAction, syncWishlist } from "@/lib/actions/prefs";
 import { currencyFor, itemFromProduct, track } from "@/lib/analytics";
 import { syncCart } from "@/lib/actions/cart";
+import { currentSlugs } from "@/lib/actions/catalog";
 
 type Toast = { id: number; text: string; image?: string; href?: string; cta?: string };
 
@@ -82,6 +83,19 @@ export function StoreProvider({
     } else setWishlist(local);
     loaded.current = true;
   }, [serverWishlist]);
+
+  // Products whose URL was renamed: move saved bag lines and wishlist entries to the new slug (once per visit).
+  useEffect(() => {
+    const saved = [...read<CartLine[]>(CART_KEY, []).map((l) => l.slug), ...read<string[]>(WISH_KEY, [])];
+    if (!saved.length) return;
+    currentSlugs(saved)
+      .then((map) => {
+        if (!Object.keys(map).length) return;
+        setCart((c) => c.map((l) => (map[l.slug] ? { ...l, slug: map[l.slug] } : l)));
+        setWishlist((w) => [...new Set(w.map((s) => map[s] ?? s))]);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => { if (loaded.current) write(CART_KEY, cart); }, [cart]);
 

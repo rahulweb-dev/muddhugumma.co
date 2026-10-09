@@ -12,6 +12,7 @@ const money = { now: { type: Number, required: true }, mrp: { type: Number, defa
 const ProductSchema = schema(
   {
     slug: { type: String, required: true, unique: true, index: true },
+    oldSlugs: { type: [String], default: [], index: true }, // previous URLs; /p/<old> 301-redirects (lib/product-slugs.ts)
     name: { type: String, required: true },
     category: { type: String, required: true, index: true }, // Category slug (managed in Admin → Categories)
     collections: { type: [String], default: [], index: true }, // bridal, festive, new
@@ -172,6 +173,7 @@ const OrderSchema = schema(
     referralCode: { type: String, default: "" },
     partialCod: { paidOnline: { type: Number, default: 0 }, dueOnDelivery: { type: Number, default: 0 } },
     codVerified: { type: Boolean, default: false },
+    reviewRequestedAt: Date, // review-requests job: when we asked the customer to review this order
     invoiceNumber: { type: String, default: "" },
     notifications: { type: [String], default: [] }, // keys of customer messages already sent, e.g. "placed", "shipped"
   },
@@ -432,7 +434,7 @@ export type AddressDoc = {
 };
 
 export type ProductDoc = Stamps & {
-  slug: string; name: string; category: string; collections: string[]; fabric?: string; occasions: string[];
+  slug: string; oldSlugs?: string[]; name: string; category: string; collections: string[]; fabric?: string; occasions: string[];
   colour: string; hex?: string; images: string[]; price: { in: MoneyDoc; uk: MoneyDoc }; freeSize?: boolean;
   stock: Map<string, number> | Record<string, number>; stockUk?: Map<string, number> | Record<string, number>; tag?: string; origin?: string; craft?: string; description?: string;
   details: string[]; care?: string; rating?: number; ratingCount?: number; active?: boolean;
@@ -469,6 +471,7 @@ export type OrderDoc = Stamps & {
   referralCode?: string;
   partialCod?: { paidOnline?: number; dueOnDelivery?: number };
   codVerified?: boolean;
+  reviewRequestedAt?: Date;
   invoiceNumber?: string;
   notifications?: string[];
 };

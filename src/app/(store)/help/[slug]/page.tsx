@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getRegion } from "@/lib/queries";
@@ -190,9 +191,10 @@ const PAGES: Record<string, HelpPage> = {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const saved = await getPage(slug);
-  if (saved) return { title: saved.title, description: saved.intro || undefined };
   const p = PAGES[slug];
-  return p ? { title: `${p.title} ${p.accent}`.replace("& ", "and "), description: p.intro } : {};
+  const title = saved?.title || (p ? `${p.title} ${p.accent}`.replace("& ", "and ") : "");
+  if (!title) return {};
+  return pageMeta({ title, description: saved?.intro || p?.intro || title, path: `/help/${slug}`, kicker: "Help" });
 }
 
 export default async function HelpPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -27,6 +27,8 @@ export type FeedItem = {
   size: string;
   productType: string;
   googleCategory: string;
+  /** Delivery for this item in its country, e.g. "GB:::4.95 GBP" (free above the threshold). */
+  shipping: string;
 };
 
 const amount = (n: number, region: Region) => (region === "in" ? `${Math.round(n)} INR` : `${n.toFixed(2)} GBP`);
@@ -41,8 +43,13 @@ export async function feedItems(region: Region): Promise<FeedItem[]> {
     const regular = m.mrp > m.now ? m.mrp : m.now;
     const onSale = m.now < regular;
     const link = `${SITE}/p/${p.slug}${region === "uk" ? "?region=uk" : ""}`;
+    const cat = categoryLabel(p.category).toLowerCase().replace(/s$/, "");
+    const r = REGION_CONFIG[region];
+    // Merchant Center ranks fuller descriptions higher; thin imported ones get a factual lead-in and delivery line.
+    const lead = clean(`${p.name}: a ${[p.colour, p.fabric?.toLowerCase()].filter(Boolean).join(" ")} ${cat}${p.occasions.length ? ` for ${p.occasions.join(", ")} wear` : ""} from House of Muddhugumma.`);
+    const delivery = region === "uk" ? "Delivered across the UK with duties and VAT included." : `Free delivery across India above ${amount(r.freeShippingAt, region).replace(/ INR$/, "")} rupees, cash on delivery available.`;
     const description = clean(
-      [p.description, p.craft && `Craft: ${p.craft}.`, p.origin && `Made in ${p.origin}.`, p.details.map((d) => d.trim().replace(/\.?$/, ".")).join(" "), p.care && `Care: ${p.care}`].filter(Boolean).join(" ")
+      [p.description, lead, p.craft && `Craft: ${p.craft}.`, p.origin && `Made in ${p.origin}.`, p.details.map((d) => d.trim().replace(/\.?$/, ".")).join(" "), p.care && `Care: ${p.care}`, delivery].filter(Boolean).join(" ")
     ).slice(0, 4900);
     const base = {
       groupId: p.slug,
@@ -57,6 +64,7 @@ export async function feedItems(region: Region): Promise<FeedItem[]> {
       material: p.fabric,
       // Google's taxonomy: jewellery is not clothing.
       googleCategory: /jewel/.test(p.category) ? "Apparel & Accessories > Jewelry" : "Apparel & Accessories > Clothing",
+      shipping: `${region === "uk" ? "GB" : "IN"}:::${amount(m.now >= r.freeShippingAt ? 0 : r.shippingFee, region)}`,
       productType: `Women > ${categoryLabel(p.category)}${p.collections.includes("bridal") ? " > Bridal" : ""}`,
     };
     for (const size of sizesFor(p.freeSize, region)) {

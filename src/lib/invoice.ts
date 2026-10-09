@@ -77,6 +77,8 @@ export type InvoiceData = {
   buyer: { name: string; email: string; phone: string; address: string[]; state: string; stateCode: string };
   placeOfSupply: string;
   intraState: boolean;
+  /** False while the business has no GSTIN (India) / VAT number (UK): no tax is charged or shown. */
+  taxRegistered: boolean;
   lines: InvoiceLine[];
   totals: { gross: number; taxable: number; tax: number; cgst: number; sgst: number; igst: number; vat: number };
   /** Breakdown of what was paid and how. */
@@ -134,6 +136,8 @@ export async function getInvoice(orderNumber: string): Promise<InvoiceData | nul
   const buyerState = a.state ?? "";
   const buyerStateCode = region === "in" ? GST_STATE_CODES[buyerState] ?? "" : "";
   const intraState = region === "in" && !!buyerStateCode && buyerStateCode === s.stateCode;
+  // An unregistered business can't charge GST/VAT, so every line is untaxed until the number is set in Admin → Settings.
+  const taxRegistered = !!(region === "in" ? s.gstin : s.ukVatNumber);
 
   // Order-level discounts are spread across the item lines in proportion to their value.
   const itemsGross = o.items.map((i) => (i.unitPrice + (i.optionsPrice ?? 0)) * i.qty);
@@ -144,8 +148,8 @@ export async function getInvoice(orderNumber: string): Promise<InvoiceData | nul
     const p = meta.get(i.slug);
     const share = itemsTotal > 0 ? (itemsGross[idx] / itemsTotal) * deductions : 0;
     const gross = r2(itemsGross[idx] - share);
-    let rate: number = UK_VAT_RATE;
-    if (region === "in") {
+    let rate: number = taxRegistered ? UK_VAT_RATE : 0;
+    if (region === "in" && taxRegistered) {
       const perUnitTaxableAtLow = gross / i.qty / (1 + GST_RULES.lowRate / 100);
       rate = perUnitTaxableAtLow <= GST_RULES.thresholdPerUnit ? GST_RULES.lowRate : GST_RULES.highRate;
     }
@@ -154,7 +158,7 @@ export async function getInvoice(orderNumber: string): Promise<InvoiceData | nul
     return { description: i.name, detail: opts, hsn: region === "in" ? hsnFor(p ?? {}) : "", qty: i.qty, gross, taxable, rate, tax: r2(gross - taxable) };
   });
 
-  const chargeRate = region === "in" ? Math.max(GST_RULES.lowRate, ...lines.map((l) => l.rate)) : UK_VAT_RATE;
+  const chargeRate = !taxRegistered ? 0 : region === "in" ? Math.max(GST_RULES.lowRate, ...lines.map((l) => l.rate)) : UK_VAT_RATE;
   const charge = (description: string, amount: number, hsn: string) => {
     if (!(amount > 0)) return;
     const taxable = r2((amount * 100) / (100 + chargeRate));
@@ -212,6 +216,7 @@ export async function getInvoice(orderNumber: string): Promise<InvoiceData | nul
       state: buyerState,
       stateCode: buyerStateCode,
     },
+    taxRegistered,
     placeOfSupply: region === "in" ? `${buyerState || "—"}${buyerStateCode ? ` (${buyerStateCode})` : ""}` : "United Kingdom",
     intraState,
     lines,

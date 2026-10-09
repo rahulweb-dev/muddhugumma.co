@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,11 +14,13 @@ const load = cache((slug: string) => getBundle(slug));
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const b = await load((await params).slug);
   if (!b) return { title: "Look not found" };
-  return {
+  return pageMeta({
     title: `${b.name} · Shop the look`,
-    description: (b.description || `A look put together by our stylists: ${b.name}.`).slice(0, 158),
-    alternates: { canonical: `/look/${b.slug}` },
-  };
+    description: b.description || `A look put together by our stylists: ${b.name}.`,
+    path: `/look/${b.slug}`,
+    kicker: "Shop the look",
+    image: b.image || undefined,
+  });
 }
 
 export default async function LookPage({ params }: { params: Params }) {

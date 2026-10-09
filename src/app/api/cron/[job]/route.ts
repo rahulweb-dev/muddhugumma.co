@@ -4,7 +4,7 @@ import { JOBS } from "@/lib/jobs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Vercel Cron calls these with "Authorization: Bearer <CRON_SECRET>". Locally: curl -H "Authorization: Bearer $CRON_SECRET" localhost:3100/api/cron/low-stock
+// GitHub Actions (.github/workflows/cron.yml) calls these with "Authorization: Bearer <CRON_SECRET>". Locally: curl -H "Authorization: Bearer $CRON_SECRET" localhost:3100/api/cron/low-stock
 export async function GET(req: Request, { params }: { params: Promise<{ job: string }> }) {
   const { job } = await params;
   const secret = process.env.CRON_SECRET;

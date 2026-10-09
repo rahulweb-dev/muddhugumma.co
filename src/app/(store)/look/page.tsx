@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Link from "next/link";
 import { LookCard } from "@/components/content/LookTeaser";
 import { getProductsBySlugs, listBundles } from "@/lib/queries";
 import "@/styles/product.css";
 
-export const metadata: Metadata = {
-  title: "Shop the look",
-  description: "Outfits our stylists have put together: festive evenings, wedding weekends and easy office weeks, ready to add to your bag in one go.",
-  alternates: { canonical: "/look" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta({
+    title: "Shop the Look: Styled Ethnic Outfits",
+    description: "Outfits our stylists have put together: saree with jewellery, festive evenings, wedding weekends and easy office weeks, ready to add to your bag in one go.",
+    keywords: ["ethnic outfit ideas", "saree styling", "wedding guest outfit", "festive outfit ideas"],
+    path: "/look",
+    kicker: "Shop the look",
+  });
+}
 
 export default async function LooksPage() {
   const bundles = await listBundles();

@@ -11,6 +11,9 @@ import { getActiveSales } from "@/lib/sales";
 import "@/styles/catalog.css";
 import { TrackOnMount } from "@/components/analytics/TrackOnMount";
 import { absImage, absUrl, breadcrumbLd, ldJson } from "@/lib/seo";
+import { listingTerms, pageMeta } from "@/lib/seo-meta";
+import { categoryContent } from "@/lib/category-content";
+import { Icon } from "@/components/Icon";
 import { LookPicker } from "@/components/catalog/LookPicker";
 import { LOOKS, LOOK_COOKIE } from "@/components/catalog/looks";
 
@@ -28,14 +31,18 @@ export async function generateMetadata({ params, searchParams }: { params: Param
   const l = await getListing(slug);
   if (!l) return { title: "Not found" };
   const sp = await searchParams;
-  const filtered = Object.keys(sp).some((k) => k !== "sort");
-  return {
-    title: `${l.title}`,
-    description: `${l.blurb ? `${l.blurb} ` : ""}Shop ${l.title.toLowerCase()} online with delivery across India and the UK.`,
-    alternates: { canonical: `/c/${slug}` },
-    robots: filtered ? { index: false, follow: true } : undefined,
-    openGraph: { title: l.title, description: l.blurb || undefined },
-  };
+  // Filtered and sorted views stay out of the index; ?region only picks the country.
+  const filtered = Object.keys(sp).some((k) => k !== "sort" && k !== "region");
+  const terms = listingTerms(slug, l.title, l.blurb);
+  return pageMeta({
+    title: { in: terms.in.title, uk: terms.uk.title },
+    description: { in: terms.in.desc, uk: terms.uk.desc },
+    keywords: { in: terms.in.keywords, uk: terms.uk.keywords },
+    path: `/c/${slug}`,
+    kicker: l.kicker,
+    image: l.image || "banners/plp-banner.webp",
+    noindex: filtered,
+  });
 }
 
 export default async function CategoryPage({ params, searchParams }: { params: Params; searchParams: Search }) {
@@ -53,6 +60,12 @@ export default async function CategoryPage({ params, searchParams }: { params: P
   const preview = process.env.NODE_ENV !== "production";
   const chosen = (await cookies()).get(LOOK_COOKIE)?.value ?? "";
   const look = preview && LOOKS.some((l) => l.id === chosen) ? chosen : "1";
+  const guide = categoryContent(slug, l.title, region);
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: guide.faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  };
 
   return (
     <div className="plp pad" data-look={look}>
@@ -104,6 +117,23 @@ export default async function CategoryPage({ params, searchParams }: { params: P
         }}
       />
       <Listing base={base} slug={slug} state={state} result={result} region={region} pageSize={PAGE_SIZE} />
+
+      <section className="plp-guide" aria-labelledby="plp-guide-h">
+        <div>
+          <h2 className="h3" id="plp-guide-h">{guide.heading}</h2>
+          {guide.intro.map((p, i) => <p key={i}>{p}</p>)}
+        </div>
+        <div className="plp-faq">
+          <h2 className="h3">Questions shoppers ask</h2>
+          {guide.faqs.map((f) => (
+            <details key={f.q}>
+              <summary>{f.q}<Icon name="plus" size={16} /></summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(faqLd) }} />
     </div>
   );
 }

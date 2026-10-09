@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,11 +14,14 @@ const load = cache((slug: string) => getLookbook(slug));
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const b = await load((await params).slug);
   if (!b) return { title: "Lookbook not found" };
-  return {
-    title: `${b.title}`,
-    description: (b.intro || `${b.title}: our ${b.festival || "festival"} lookbook.`).replace(/\s+/g, " ").slice(0, 158),
-    alternates: { canonical: `/lookbook/${b.slug}` },
-  };
+  return pageMeta({
+    title: b.title,
+    description: b.intro || `${b.title}: our ${b.festival || "festival"} lookbook.`,
+    keywords: b.festival ? [`${b.festival} outfits`, `${b.festival} saree`, `what to wear for ${b.festival}`] : undefined,
+    path: `/lookbook/${b.slug}`,
+    kicker: b.festival ? `${b.festival} lookbook` : "Lookbook",
+    image: b.hero || undefined,
+  });
 }
 
 export default async function LookbookPage({ params }: { params: Params }) {

@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Image from "next/image";
 import Link from "next/link";
 import { listLookbooks } from "@/lib/queries";
 import "@/styles/home.css";
 
-export const metadata: Metadata = {
-  title: "Lookbooks",
-  description: "Festival and occasion lookbooks: what to wear for Diwali, Onam and weddings, in India and the UK.",
-  alternates: { canonical: "/lookbook" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta({
+    title: "Lookbooks: What to Wear for Diwali, Onam & Weddings",
+    description: "Festival and occasion lookbooks: sarees, half sarees and kurta sets for Diwali, Onam, Pongal and weddings, in India and the UK.",
+    keywords: ["Diwali outfit ideas", "Onam saree ideas", "wedding outfit ideas", "festival lookbook", "what to wear for Diwali"],
+    path: "/lookbook",
+    kicker: "Lookbooks",
+  });
+}
 
 export default async function LookbooksPage() {
   const books = await listLookbooks();

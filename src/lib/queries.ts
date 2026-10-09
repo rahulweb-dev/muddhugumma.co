@@ -274,8 +274,10 @@ export async function getProducts(filter: Record<string, unknown> = {}, limit = 
 export async function getProductsBySlugs(slugs: string[]) {
   if (!slugs.length) return [];
   await db();
-  const [docs, region] = await Promise.all([Product.find({ slug: { $in: slugs }, active: true }).lean<ProductDoc[]>(), getRegion()]);
-  return slugs.map((s) => docs.find((d) => d.slug === s)).filter(Boolean).map((d) => toDTO(d!, region));
+  // Old slugs (renamed products) still resolve, so saved wishlists and recently-viewed lists keep working.
+  const [docs, region] = await Promise.all([Product.find({ $or: [{ slug: { $in: slugs } }, { oldSlugs: { $in: slugs } }], active: true }).lean<ProductDoc[]>(), getRegion()]);
+  const found = slugs.map((s) => docs.find((d) => d.slug === s || d.oldSlugs?.includes(s))).filter((d): d is ProductDoc => !!d);
+  return [...new Set(found)].map((d) => toDTO(d, region));
 }
 
 export async function getProduct(slug: string): Promise<ProductFull | null> {

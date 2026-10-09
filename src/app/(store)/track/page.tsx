@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Link from "next/link";
 import { TrackForm } from "@/components/tracking/TrackForm";
 import { getSession } from "@/lib/auth";
 
-export const metadata: Metadata = {
-  title: "Track your order",
-  description: "Track your House of Muddhugumma order with your order number and the email or phone you used at checkout.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta({
+    title: "Track your order",
+    description: "Track your House of Muddhugumma order with your order number and the email or phone you used at checkout.",
+    path: "/track",
+    kicker: "Order tracking",
+  });
+}
 
 export default async function TrackPage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
   const [{ order }, session] = await Promise.all([searchParams, getSession()]);

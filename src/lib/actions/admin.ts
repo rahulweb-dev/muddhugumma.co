@@ -9,6 +9,7 @@ import { onOrderStatusChanged } from "@/lib/order-events";
 import { Coupon, Lookbook, Order, Product, Supplier } from "@/lib/models";
 import { canonicalSize, type Region } from "@/lib/region";
 import { stockPath } from "@/lib/stock";
+import { renameProductSlug } from "@/lib/product-slugs";
 import { ProductInputSchema, productDoc, productRuleError } from "@/lib/admin-data";
 import { allCategories } from "@/lib/categories";
 
@@ -87,9 +88,8 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult> {
   // Keep each lookbook's product list in step with the product's own list.
   const added = doc.lookbooks.filter((s) => !oldLookbooks.includes(s));
   const removed = oldLookbooks.filter((s) => !doc.lookbooks.includes(s));
-  if (oldSlug && oldSlug !== v.slug) {
-    await Lookbook.updateMany({ productSlugs: oldSlug }, { $set: { "productSlugs.$": v.slug } });
-  }
+  // A new URL: old links redirect and every stored reference (lookbooks, wishlists, reviews…) follows.
+  if (oldSlug && oldSlug !== v.slug) await renameProductSlug(oldSlug, v.slug);
   if (added.length) await Lookbook.updateMany({ slug: { $in: added } }, { $addToSet: { productSlugs: v.slug } });
   if (removed.length) await Lookbook.updateMany({ slug: { $in: removed } }, { $pull: { productSlugs: v.slug } });
 

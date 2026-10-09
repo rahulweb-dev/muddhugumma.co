@@ -8,6 +8,7 @@ export function InvoiceView({ inv }: { inv: InvoiceData }) {
     new Intl.NumberFormat(inv.region === "in" ? "en-IN" : "en-GB", { style: "currency", currency: inv.region === "in" ? "INR" : "GBP", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
   const date = (d: Date) => d.toLocaleDateString(inv.region === "in" ? "en-IN" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
   const india = inv.region === "in";
+  const taxed = inv.taxRegistered;
 
   return (
     <article className="inv-doc mx-auto w-full max-w-[880px] border border-line bg-paper p-4 text-[13px] text-ink sm:p-6 md:p-10 print:max-w-none print:border-0 print:p-0 print:text-[11px]">
@@ -19,11 +20,11 @@ export function InvoiceView({ inv }: { inv: InvoiceData }) {
           {inv.seller.taxId ? (
             <p className="m-0 text-muted">{inv.seller.taxLabel}: <b className="text-ink">{inv.seller.taxId}</b>{india && <> · State code {inv.seller.stateCode}</>}</p>
           ) : (
-            <p className="m-0 text-sale print:hidden">{inv.seller.taxLabel} not set yet (Admin → Settings).</p>
+            <p className="m-0 text-muted">Not registered for {india ? "GST" : "VAT"}: no tax charged.</p>
           )}
         </div>
         <div className="flex flex-col gap-1 md:text-right">
-          <h1 className="h2 !text-[22px]">{india ? "Tax invoice" : "VAT invoice"}</h1>
+          <h1 className="h2 !text-[22px]">{!taxed ? "Invoice" : india ? "Tax invoice" : "VAT invoice"}</h1>
           <p className="m-0">Invoice <b>{inv.number}</b></p>
           <p className="m-0 text-muted">Invoice date {date(inv.date)}</p>
           <p className="m-0 text-muted">Order {inv.orderNumber} · {date(inv.orderDate)}</p>
@@ -42,7 +43,7 @@ export function InvoiceView({ inv }: { inv: InvoiceData }) {
         <div className="md:text-right">
           <h2 className="h3 mb-2">Place of supply</h2>
           <p className="m-0">{inv.placeOfSupply}</p>
-          {india && <p className="m-0 text-muted">{inv.intraState ? "Same state as the seller: CGST + SGST" : "Inter-state supply: IGST"}</p>}
+          {india && taxed && <p className="m-0 text-muted">{inv.intraState ? "Same state as the seller: CGST + SGST" : "Inter-state supply: IGST"}</p>}
           <p className="m-0 mt-2 text-muted">Payment: {inv.payment.method}{inv.payment.status === "paid" ? " (paid)" : ""}</p>
         </div>
       </section>
@@ -54,8 +55,8 @@ export function InvoiceView({ inv }: { inv: InvoiceData }) {
               <th>Item</th>
               {india && <th>HSN</th>}
               <th className="num">Qty</th>
-              <th className="num">Taxable value</th>
-              <th className="num">{india ? "GST" : "VAT"}</th>
+              {taxed && <th className="num">Taxable value</th>}
+              {taxed && <th className="num">{india ? "GST" : "VAT"}</th>}
               <th className="num">Amount</th>
             </tr>
           </thead>
@@ -68,8 +69,8 @@ export function InvoiceView({ inv }: { inv: InvoiceData }) {
                 </td>
                 {india && <td>{l.hsn}</td>}
                 <td className="num">{l.qty}</td>
-                <td className="num">{money2(l.taxable)}</td>
-                <td className="num">{money2(l.tax)}<small className="block text-muted">{l.rate}%</small></td>
+                {taxed && <td className="num">{money2(l.taxable)}</td>}
+                {taxed && <td className="num">{money2(l.tax)}<small className="block text-muted">{l.rate}%</small></td>}
                 <td className="num">{money2(l.gross)}</td>
               </tr>
             ))}
@@ -78,6 +79,7 @@ export function InvoiceView({ inv }: { inv: InvoiceData }) {
       </div>
 
       <section className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-2 print:grid-cols-2">
+        {taxed ? (
         <dl className="m-0 flex flex-col gap-1.5">
           <h2 className="h3 mb-1">Tax summary</h2>
           <Row k="Taxable value" v={money2(inv.totals.taxable)} />
@@ -95,6 +97,9 @@ export function InvoiceView({ inv }: { inv: InvoiceData }) {
           )}
           <Row k="Total incl. tax" v={money2(inv.totals.gross)} strong />
         </dl>
+        ) : (
+          <div />
+        )}
         <dl className="m-0 flex flex-col gap-1.5">
           <h2 className="h3 mb-1">Amounts</h2>
           {inv.money.map((m, i) => (
@@ -106,7 +111,9 @@ export function InvoiceView({ inv }: { inv: InvoiceData }) {
 
       <footer className="mt-8 border-t border-line pt-4 text-[11.5px] text-muted">
         <p className="m-0">
-          {india
+          {!taxed
+            ? `Not registered for ${india ? "GST" : "VAT"}, so no tax is charged on this invoice. This is a computer-generated invoice and needs no signature.`
+            : india
             ? "All prices include GST. Tax is not payable on reverse charge. This is a computer-generated invoice and needs no signature."
             : "All prices include UK VAT at 20%. This is a computer-generated invoice and needs no signature."}
         </p>

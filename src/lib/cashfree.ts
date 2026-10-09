@@ -52,8 +52,7 @@ export async function createCashfreeOrder(i: CreateInput): Promise<CashfreeCheck
       customer_id: i.orderId,
       customer_name: i.customer.name.slice(0, 100) || undefined,
       customer_email: i.customer.email,
-      // Cashfree requires a phone; gift card buyers don't give one, so a placeholder is sent (they pay by UPI/card as usual).
-      customer_phone: phone.length === 10 ? phone : "9999999999",
+      customer_phone: phone,
     },
     // Cashfree only accepts https URLs here; on localhost the popup flow and confirmCashfree… cover it.
     order_meta: https ? { return_url: `${site}${i.returnPath}`, notify_url: `${site}/api/webhooks/cashfree` } : undefined,

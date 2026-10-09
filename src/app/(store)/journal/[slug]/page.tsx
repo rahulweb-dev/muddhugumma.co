@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,12 +16,7 @@ const plain = (md: string) => md.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const p = await load((await params).slug);
   if (!p) return { title: "Story not found" };
-  return {
-    title: `${p.title}`,
-    description: (p.excerpt || plain(p.body)).slice(0, 158),
-    alternates: { canonical: `/journal/${p.slug}` },
-    openGraph: { type: "article", title: p.title, description: p.excerpt || undefined },
-  };
+  return pageMeta({ title: p.title, description: p.excerpt || plain(p.body), path: `/journal/${p.slug}`, kicker: "The Journal", image: p.cover || undefined, type: "article" });
 }
 
 export default async function PostPage({ params }: { params: Params }) {

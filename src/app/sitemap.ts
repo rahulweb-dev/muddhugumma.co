@@ -17,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     Post.find({ status: "published" }, { slug: 1, updatedAt: 1 }).lean<{ slug: string; updatedAt?: Date }[]>(),
   ]);
   const help = ["shipping", "returns", "size-guide", "faq", "contact", "privacy", "terms", "cookies"];
-  return [
+  const entries: MetadataRoute.Sitemap = [
     { url: base, changeFrequency: "daily", priority: 1 },
     { url: `${base}/about`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/consult`, changeFrequency: "monthly", priority: 0.5 },
@@ -34,4 +34,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...looks.map((b) => ({ url: `${base}/look/${b.slug}`, lastModified: b.updatedAt, changeFrequency: "weekly" as const, priority: 0.5 })),
     ...help.map((h) => ({ url: `${base}/help/${h}`, changeFrequency: "yearly" as const, priority: 0.3 })),
   ];
+  // Each page in both stores: India (also the default) and the UK (?region=uk), linked with hreflang.
+  return entries.map((e) => {
+    const url = e.url === base ? `${base}/` : e.url;
+    const uk = `${url}${url.includes("?") ? "&" : "?"}region=uk`;
+    return { ...e, alternates: { languages: { "en-IN": url, "en-GB": uk, "x-default": url } } };
+  });
 }

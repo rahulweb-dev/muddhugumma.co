@@ -1,11 +1,17 @@
 "use server";
 import { getListing, getProductsBySlugs, getRegion, listProducts, type ListingQuery } from "@/lib/queries";
 import type { ProductDTO } from "@/lib/types";
+import { currentSlugsFor } from "@/lib/product-slugs";
 
 const cleanSlugs = (slugs: unknown, max: number): string[] =>
   Array.isArray(slugs)
     ? [...new Set(slugs.filter((s): s is string => typeof s === "string" && /^[a-z0-9-]{1,120}$/.test(s)))].slice(0, max)
     : [];
+
+/** Bag and wishlist slugs kept in the browser that have since been renamed: { old: new }. */
+export async function currentSlugs(slugs: string[]): Promise<Record<string, string>> {
+  return currentSlugsFor(cleanSlugs(slugs, 300));
+}
 
 /** Products for the wishlist page, in wishlist order. */
 export async function getWishlistProducts(slugs: string[]): Promise<ProductDTO[]> {

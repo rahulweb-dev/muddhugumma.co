@@ -31,6 +31,7 @@ ${tag("size", i.size)}
 ${region === "uk" && i.size.startsWith("UK ") ? tag("size_system", "UK") : ""}
 ${tag("item_group_id", i.groupId)}
 ${tag("identifier_exists", "no")}
+${i.shipping ? `<g:shipping><g:country>${i.shipping.split(":::")[0]}</g:country><g:price>${x(i.shipping.split(":::")[1])}</g:price></g:shipping>` : ""}
 </item>`.replace(/\n{2,}/g, "\n")
     )
     .join("\n");

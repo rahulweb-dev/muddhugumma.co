@@ -1,13 +1,22 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { PurchaseForm } from "@/components/giftcards/PurchaseForm";
 import "@/styles/checkout.css";
 
-export const metadata: Metadata = {
-  title: "Gift cards",
-  description: "Send a House of Muddhugumma gift card by email: sarees, kurta sets and lehengas, in India (₹) or the UK (£).",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta({
+    title: { in: "Gift Cards: Ethnic Wear e-Gift Cards", uk: "Gift Cards UK: Indian Ethnic Wear e-Gift Cards" },
+    description: {
+      in: "Send a House of Muddhugumma e-gift card by email for sarees, half sarees and kurta sets. Valid 12 months on India orders.",
+      uk: "Send a House of Muddhugumma e-gift card by email for Indian sarees, kurta sets and bridal wear, in pounds for UK orders. Valid 12 months.",
+    },
+    keywords: { in: ["saree gift card", "ethnic wear gift card", "e-gift card India"], uk: ["Indian clothes gift card UK", "saree gift voucher UK"] },
+    path: "/gift-cards",
+    kicker: "Gift cards",
+  });
+}
 
 export default async function GiftCardsPage() {
   const session = await getSession();

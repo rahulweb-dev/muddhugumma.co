@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Image from "next/image";
 import Link from "next/link";
 import { listPosts } from "@/lib/queries";
 import "@/styles/home.css";
 
-export const metadata: Metadata = {
-  title: "The Journal",
-  description: "Drape guides, care notes and what-to-wear advice for weddings and festivals in India and the UK.",
-  alternates: { canonical: "/journal" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta({
+    title: "The Journal: Saree Draping, Care & What to Wear Guides",
+    description: "Saree draping guides, silk care notes and what-to-wear advice for weddings, Diwali and festivals in India and the UK.",
+    keywords: ["how to drape a saree", "saree care tips", "what to wear to an Indian wedding", "silk saree care", "Diwali outfit ideas"],
+    path: "/journal",
+    kicker: "The Journal",
+  });
+}
 
 const date = (iso: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "");
 

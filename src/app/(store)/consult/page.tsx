@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Link from "next/link";
 import { getRegion } from "@/lib/queries";
 import { getSession } from "@/lib/auth";
 import { ConsultForm } from "./ConsultForm";
 import { consultDates } from "./slots";
 
-export const metadata: Metadata = {
-  title: "Book a video consult",
-  description: "Book a free 30-minute video call with our stylists for bridal, trousseau or festive shopping, from India or the UK.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta({
+    title: { in: "Book a Free Bridal & Saree Styling Video Consult", uk: "Free Indian Bridal Styling Video Consult UK" },
+    description: "Book a free 30-minute video call with our stylists for bridal, trousseau or festive shopping: see sarees, half sarees and lehengas live, from India or the UK.",
+    keywords: { in: ["bridal saree consultation", "video call saree shopping", "trousseau shopping", "bridal styling"], uk: ["Indian bridal consultation UK", "video call saree shopping UK", "Asian bridal stylist UK"] },
+    path: "/consult",
+    kicker: "Free video consult",
+  });
+}
 
 const EXPECT = [
   ["See the weave up close", "We hold each piece to the camera in daylight so you see the true colour, the zari and the drape."],

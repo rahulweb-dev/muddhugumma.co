@@ -29,6 +29,8 @@ const schema = z.object({
     .transform((s) => s.replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, "").trim())
     .pipe(z.string().max(300, "Keep the message to 300 characters")),
   purchaserEmail: email,
+  // India only: Cashfree needs the buyer's mobile (10 digits, 6–9 first).
+  purchaserPhone: z.string().optional().default("").transform((s) => s.replace(/\D/g, "").slice(-10)),
 });
 
 export type GiftCardPurchaseInput = z.input<typeof schema>;
@@ -59,6 +61,9 @@ export async function purchaseGiftCard(input: GiftCardPurchaseInput): Promise<Gi
   const d = parsed.data;
   const region = await getRegion();
   if (d.region !== region) return { ok: false, error: "Your region changed. Check the amount and try again." };
+  if (region === "in" && !/^[6-9]\d{9}$/.test(d.purchaserPhone)) {
+    return { ok: false, error: "Please check the highlighted details.", fieldErrors: { purchaserPhone: "Enter your 10-digit mobile number" } };
+  }
   const lim = LIMITS[region];
   if (d.amount < lim.min || d.amount > lim.max) {
     const msg = `Choose an amount between ${formatMoney(lim.min, region)} and ${formatMoney(lim.max, region)}.`;
@@ -90,7 +95,7 @@ export async function purchaseGiftCard(input: GiftCardPurchaseInput): Promise<Gi
       const cashfree = await createCashfreeOrder({
         orderId: ref,
         amount: d.amount,
-        customer: { name: "", email: purchaserEmail, phone: "" },
+        customer: { name: "", email: purchaserEmail, phone: d.purchaserPhone },
         returnPath: thanks,
         note: `Gift card for ${d.recipientName}`,
         kind: "giftcard",

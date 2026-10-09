@@ -10,9 +10,31 @@ import { getSettings } from "@/lib/settings";
 import { DEFAULT_SLIDES, DEFAULT_STORY } from "@/lib/home-defaults";
 import { BRAND, SITE, absImage, ldJson } from "@/lib/seo";
 import { REGION_CONFIG } from "@/lib/region";
+import { BASE_KEYWORDS, pageMeta } from "@/lib/seo-meta";
 import "@/styles/home.css";
 
 const BENTO = ["big", "", "tall", ""]; // tile shapes, in category order
+
+export async function generateMetadata() {
+  const settings = await getSettings();
+  const meta = await pageMeta({
+    title: {
+      in: "Buy Sarees, Half Sarees & Kurta Sets Online in India",
+      uk: "Indian Sarees, Kurta Sets & Ethnic Wear Online in the UK",
+    },
+    description: {
+      in: "House of Muddhugumma: handwoven silk, Kanjeevaram and Banarasi sarees, half sarees, kurta sets and bridal wear. Free shipping across India above ₹1,999, COD and easy 7-day returns.",
+      uk: "House of Muddhugumma: Indian silk, Kanjeevaram and Banarasi sarees, half sarees, kurta sets and bridal wear delivered across the UK. Duties included, free video styling consults.",
+    },
+    keywords: BASE_KEYWORDS,
+    path: "/",
+    kicker: "Ethnic wear · India & UK",
+    image: settings.home?.slides?.[0]?.image,
+  });
+  // The home page title stands alone (no "· House of Muddhugumma" suffix), with the brand in front.
+  const t = String(meta.title);
+  return { ...meta, title: { absolute: `${BRAND} | ${t}` } };
+}
 
 export default async function HomePage() {
   const region = await getRegion();

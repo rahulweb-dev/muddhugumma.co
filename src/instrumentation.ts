@@ -14,6 +14,30 @@ export function register() {
 }
 
 const recent = new Map<string, number>();
+const emailed = new Map<string, number>();
+
+/**
+ * Emails ERROR_EMAIL (or TEAM_EMAIL) about a production error, at most once an hour per route + message per server
+ * instance, so a broken page doesn't flood the inbox. Free alternative to an error-tracking service.
+ */
+async function emailAlert(route: string, request: { method: string; path: string }, message: string, digest: string) {
+  const to = process.env.ERROR_EMAIL || process.env.TEAM_EMAIL;
+  if (!to || process.env.NODE_ENV !== "production" || process.env.NEXT_RUNTIME !== "nodejs") return;
+  const key = `${route}|${message}`;
+  const now = Date.now();
+  if ((emailed.get(key) ?? 0) > now - 3_600_000) return;
+  emailed.set(key, now);
+  if (emailed.size > 200) emailed.clear();
+  try {
+    const { sendEmail } = await import("./lib/notify");
+    const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+    const text = `${request.method} ${site}${request.path}\nRoute: ${route}\nError: ${message}${digest ? `\nDigest: ${digest}` : ""}\nTime: ${new Date().toISOString()}\n\nFull details are in the Vercel logs (Project → Logs, search for the digest).`;
+    const html = `<pre style="font:13px/1.5 monospace;white-space:pre-wrap">${text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!)}</pre>`;
+    await sendEmail({ to, subject: `Site error: ${message.slice(0, 80)}`, html, text, template: "error-alert" });
+  } catch (e) {
+    console.error("[error] alert email failed", e);
+  }
+}
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
   const err = error as { message?: string; digest?: string; stack?: string };
@@ -22,6 +46,8 @@ export const onRequestError: Instrumentation.onRequestError = async (error, requ
   const route = context.routePath || request.path;
 
   console.error(`[error] ${request.method} ${request.path} (${context.routeType} ${route})${digest ? ` digest=${digest}` : ""}: ${message}`);
+
+  await emailAlert(route, request, message, digest);
 
   const url = process.env.ERROR_WEBHOOK_URL;
   if (!url) return;

@@ -11,7 +11,8 @@ import { User } from "@/lib/models";
 import { CONSENT_COOKIE, parseConsent } from "@/lib/analytics";
 import { activeCategories } from "@/lib/categories";
 import { getSettings } from "@/lib/settings";
-import { BRAND, SITE, absImage } from "@/lib/seo";
+import { BRAND, SITE } from "@/lib/seo";
+import { ogImage } from "@/lib/seo-meta";
 import "./globals.css";
 
 const tenor = Tenor_Sans({ weight: "400", subsets: ["latin"], variable: "--font-tenor", display: "swap" });
@@ -37,14 +38,16 @@ export async function generateMetadata(): Promise<Metadata> {
   const names = cats.filter((c) => c.inNav).map((c) => c.name.toLowerCase());
   const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0] ?? "ethnic wear";
   const description = `Ethnic wear that celebrates heritage, grace & you: ${list}, delivered across India and the UK.`;
-  const ogImage = absImage(settings.home?.slides?.[0]?.image ?? "", "w-1200,h-630,fo-auto,q-85");
+  // Default share card (logo, brand line, first homepage photo) for any page that doesn't set its own.
+  const card = ogImage({ title: "Ethnic wear for India & the UK", kicker: "Sarees · Half sarees · Kurta sets", image: settings.home?.slides?.[0]?.image });
   return {
     metadataBase: new URL(SITE),
     title: { default: `${BRAND} · Ethnic wear for India & the UK`, template: `%s · ${BRAND}` },
     description,
     applicationName: BRAND,
-    openGraph: { siteName: BRAND, type: "website", description, ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : {}) },
-    twitter: { card: "summary_large_image" },
+    keywords: ["ethnic wear", "sarees", "half sarees", "kurta sets", "Indian ethnic wear UK", "buy sarees online", BRAND],
+    openGraph: { siteName: BRAND, type: "website", description, images: [card] },
+    twitter: { card: "summary_large_image", images: [card.url] },
     verification: GOOGLE_VERIFICATION ? { google: GOOGLE_VERIFICATION } : undefined,
     // Icons come from src/app/icon.tsx and apple-icon.tsx; the web app manifest from src/app/manifest.ts.
     appleWebApp: { capable: true, title: "Muddhugumma", statusBarStyle: "default" },

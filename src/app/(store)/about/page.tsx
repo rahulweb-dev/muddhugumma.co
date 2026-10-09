@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo-meta";
 import Image from "next/image";
 import Link from "next/link";
 import { getPage } from "@/lib/pages";
@@ -6,7 +7,13 @@ import { CmsArticle } from "@/components/CmsArticle";
 
 export async function generateMetadata(): Promise<Metadata> {
   const saved = await getPage("about");
-  return saved ? { title: saved.title, description: saved.intro || undefined } : metadata;
+  return pageMeta({
+    title: saved?.title || String(metadata.title ?? "Our story"),
+    description: saved?.intro || String(metadata.description ?? "The story of House of Muddhugumma: handwoven sarees and ethnic wear from India's weaving clusters, for India and the UK."),
+    keywords: ["House of Muddhugumma", "handloom saree brand", "Indian ethnic wear brand", "sarees from weaving clusters"],
+    path: "/about",
+    kicker: "Our story",
+  });
 }
 
 const metadata: Metadata = {

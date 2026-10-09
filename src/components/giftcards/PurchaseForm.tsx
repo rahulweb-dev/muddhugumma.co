@@ -21,6 +21,7 @@ export function PurchaseForm({ email: signedInEmail }: { email: string }) {
   const [recipientEmail, setRecipientEmail] = useState("");
   const [message, setMessage] = useState("");
   const [purchaserEmail, setPurchaserEmail] = useState(signedInEmail);
+  const [purchaserPhone, setPurchaserPhone] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -54,12 +55,13 @@ export function PurchaseForm({ email: signedInEmail }: { email: string }) {
     if (recipientName.trim().length < 2) errs.recipientName = "Enter their name";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim())) errs.recipientEmail = "Enter a valid email address";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(purchaserEmail.trim())) errs.purchaserEmail = "Enter a valid email address";
+    if (region === "in" && !/^[6-9]\d{9}$/.test(purchaserPhone.replace(/\D/g, "").slice(-10))) errs.purchaserPhone = "Enter your 10-digit mobile number";
     setErrors(errs);
     setError("");
     if (Object.keys(errs).length) return;
     setBusy(true);
     try {
-      const res = await purchaseGiftCard({ region, amount, recipientName, recipientEmail, message, purchaserEmail });
+      const res = await purchaseGiftCard({ region, amount, recipientName, recipientEmail, message, purchaserEmail, purchaserPhone });
       if (!res.ok) {
         setError(res.error);
         setErrors(res.fieldErrors ?? {});
@@ -122,6 +124,13 @@ export function PurchaseForm({ email: signedInEmail }: { email: string }) {
           <input id="gc-pemail" type="email" inputMode="email" autoComplete="email" value={purchaserEmail} onChange={(e) => setPurchaserEmail(e.target.value)} aria-invalid={!!err("purchaserEmail") || undefined} />
           {err("purchaserEmail") && <span className="err" role="alert">{err("purchaserEmail")}</span>}
         </div>
+        {region === "in" && (
+          <div className="field full">
+            <label htmlFor="gc-pphone">Your mobile number (for the payment)</label>
+            <input id="gc-pphone" type="tel" inputMode="tel" autoComplete="tel-national" maxLength={14} placeholder="10-digit mobile" value={purchaserPhone} onChange={(e) => setPurchaserPhone(e.target.value)} aria-invalid={!!err("purchaserPhone") || undefined} />
+            {err("purchaserPhone") && <span className="err" role="alert">{err("purchaserPhone")}</span>}
+          </div>
+        )}
       </div>
 
       <button type="submit" className="btn block" disabled={busy || amount <= 0}>
