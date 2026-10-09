@@ -1,0 +1,233 @@
+/* Bag, checkout and order confirmation: Studio Stone (stone neutrals, bronze accent, hairlines). Mobile first. */
+@layer components {
+  
+  .co-page{padding-block:8px 112px; min-width:0}
+  @media (min-width:900px){ .co-page{padding-bottom:64px} }
+  .co-page .empty .ic{color:var(--bronze)}
+  .co-empty-cta{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
+  .co-skel{height:420px; margin-top:16px; background:linear-gradient(90deg,var(--stone) 0%,var(--stone-2) 50%,var(--stone) 100%); background-size:200% 100%; animation:co-shim 1.4s linear infinite}
+  @keyframes co-shim{to{background-position:-200% 0}}
+  
+  /* steps */
+  .co-steps{list-style:none; margin:0; padding:16px 0 0; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); counter-reset:co}
+  .co-steps li{position:relative; display:flex; align-items:center; gap:7px; counter-increment:co; white-space:nowrap}
+  .co-steps li::before{content:counter(co); width:22px; height:22px; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; font-size:10.5px; letter-spacing:0; background:var(--paper); flex:none}
+  .co-steps li + li{margin-left:8px; padding-left:26px}
+  .co-steps li + li::after{content:""; position:absolute; left:0; top:50%; width:18px; border-top:1px solid var(--line)}
+  .co-steps li.on{color:var(--ink)}
+  .co-steps li.on::before{background:var(--ink); border-color:var(--ink); color:var(--on)}
+  .co-steps li.done{color:var(--bronze)}
+  .co-steps li.done::before{content:"\2713"; border-color:var(--bronze); color:var(--bronze)}
+  .co-steps li.done + li::after{border-color:var(--bronze)}
+  .co-steps a{border-bottom:1px solid currentColor}
+  @media (min-width:480px){ .co-steps{font-size:11px; letter-spacing:.18em} .co-steps li + li{margin-left:12px; padding-left:46px} .co-steps li + li::after{width:34px} }
+  
+  .co-head{display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:6px 14px; padding-block:18px 14px; border-bottom:1px solid var(--line); margin-bottom:18px}
+  .co-head .h1{font-size:clamp(22px,3.6vw,38px)}
+  .co-head .h1 i{font-family:var(--serif); text-transform:none; letter-spacing:0; color:var(--bronze); font-size:1.18em}
+  .co-secure{display:inline-flex; gap:6px; align-items:center; font-size:12px; color:var(--ok); font-weight:600}
+  
+  /* layout */
+  .co-layout{display:grid; grid-template-columns:minmax(0,1fr); gap:22px}
+  .co-main{display:flex; flex-direction:column; gap:16px; min-width:0}
+  .co-side{display:flex; flex-direction:column; gap:14px; min-width:0}
+  @media (min-width:900px){
+    .co-layout{grid-template-columns:minmax(0,1fr) 360px; gap:40px; align-items:start}
+    .co-side{position:sticky; top:96px}
+  }
+  @media (min-width:1100px){ .co-layout{grid-template-columns:minmax(0,1fr) 400px; gap:56px} }
+  
+  .co-card{border:1px solid var(--line); background:var(--paper); padding:16px; display:flex; flex-direction:column; gap:14px}
+  @media (min-width:720px){ .co-card{padding:22px 24px} }
+  .co-card p{margin:0}
+  .co-card .h3{display:flex; align-items:center; gap:8px}
+  
+  /* free-shipping progress */
+  .co-ship{display:flex; gap:12px; align-items:flex-start; background:var(--stone); padding:14px 16px}
+  .co-ship svg{color:var(--bronze); margin-top:1px}
+  .co-ship > div{flex:1; min-width:0; display:flex; flex-direction:column; gap:8px}
+  .co-ship p{margin:0; font-size:13.5px}
+  .co-bar{height:3px; background:var(--stone-2); overflow:hidden}
+  .co-bar span{display:block; height:100%; background:var(--bronze); transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  
+  /* bag lines */
+  .co-lines{list-style:none; margin:0; padding:0; border-top:1px solid var(--line)}
+  .co-line{display:grid; grid-template-columns:96px minmax(0,1fr); gap:14px; padding:16px 0; border-bottom:1px solid var(--line)}
+  @media (min-width:720px){ .co-line{grid-template-columns:120px minmax(0,1fr); gap:20px; padding:20px 0} }
+  .co-img{aspect-ratio:3/4; display:block}
+  .co-img::after{inset:6px}
+  .co-img img{object-position:50% 20%}
+  .co-info{display:flex; flex-direction:column; gap:5px; min-width:0}
+  .co-brand{font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase}
+  .co-name{font-size:14px; color:var(--ink); line-height:1.35; overflow-wrap:anywhere}
+  .co-name:hover{color:var(--bronze)}
+  .co-meta{display:flex; flex-wrap:wrap; gap:4px 6px; font-size:12px; color:var(--muted)}
+  .co-meta span{border:1px solid var(--line); padding:1px 8px; background:var(--paper)}
+  .co-meta b{color:var(--ink); font-weight:600}
+  .co-row{display:flex; align-items:center; gap:14px; margin-top:4px}
+  .co-qty{display:inline-flex; align-items:center; border:1px solid var(--line); height:34px}
+  .co-qty button{width:34px; height:100%; display:grid; place-items:center}
+  .co-qty button:disabled{opacity:.3; cursor:default}
+  .co-qty button:not(:disabled):hover{background:var(--stone)}
+  .co-qty output{min-width:28px; text-align:center; font-weight:700; font-variant-numeric:tabular-nums; font-size:13px}
+  .co-ltot{font-size:13px; font-weight:700; font-variant-numeric:tabular-nums}
+  .co-acts{display:flex; flex-wrap:wrap; gap:4px 18px; margin-top:6px}
+  .co-acts button{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding:4px 0}
+  .co-acts button:hover{color:var(--ink)}
+  .co-assure{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:10px 22px; font-size:12.5px; color:var(--muted)}
+  .co-assure li{display:flex; align-items:center; gap:7px}
+  .co-assure svg{color:var(--bronze); width:18px; height:18px}
+  
+  /* price summary */
+  .co-sum{border:1px solid var(--line); padding:16px; background:var(--paper)}
+  @media (min-width:720px){ .co-sum{padding:20px 22px} }
+  .co-sum .h3 .muted{letter-spacing:.06em; text-transform:none; font-family:var(--body); font-size:12.5px}
+  .co-sum dl{margin:14px 0 0; display:flex; flex-direction:column; gap:10px; font-size:13.5px}
+  .co-sum dl div{display:flex; justify-content:space-between; gap:12px}
+  .co-sum dt{color:var(--muted)}
+  .co-sum dd{margin:0; font-variant-numeric:tabular-nums; text-align:right}
+  .co-sum .save dd{color:var(--ok)}
+  .co-sum .free{color:var(--ok); font-weight:700; letter-spacing:.06em; text-transform:uppercase; font-size:12px}
+  .co-sum .tot{border-top:1px solid var(--line); padding-top:12px; margin-top:2px; font-weight:700; font-size:15px}
+  .co-sum .tot dt{color:var(--ink); font-family:var(--display); font-weight:400; letter-spacing:.12em; text-transform:uppercase; font-size:13px}
+  .co-savings{margin:12px 0 0; padding:8px 10px; background:#ECF3EE; color:var(--ok); font-size:12.5px; font-weight:700}
+  .co-tax{margin:10px 0 0; font-size:11.5px; color:var(--muted)}
+  
+  /* coupon */
+  .co-coupon{border:1px solid var(--line); padding:14px 16px; display:flex; flex-direction:column; gap:10px; background:var(--paper)}
+  .co-coupon .h3{display:flex; align-items:center; gap:8px}
+  .co-coupon .h3 svg{color:var(--bronze)}
+  .co-cform{display:flex; border:1px solid var(--line); height:44px}
+  .co-cform:focus-within{border-color:var(--ink)}
+  .co-cform input{flex:1; min-width:0; border:0; background:transparent; padding:0 12px; font-size:13px; letter-spacing:.1em; text-transform:uppercase; outline:none}
+  .co-cform input::placeholder{letter-spacing:.02em; text-transform:none}
+  .co-cform button{padding:0 16px; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--bronze); border-left:1px solid var(--line)}
+  .co-cform button:disabled{opacity:.5}
+  .co-cerr{margin:0; font-size:12px; color:var(--sale)}
+  .co-applied{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; border:1px dashed var(--bronze); background:var(--stone); padding:10px 12px}
+  .co-applied > div{display:flex; flex-direction:column; gap:2px; min-width:0}
+  .co-applied b{letter-spacing:.14em; font-size:13px}
+  .co-applied span{font-size:12.5px; color:var(--ok)}
+  .co-applied small{font-size:11.5px; color:var(--muted)}
+  .co-applied.bad{border-color:var(--sale)}
+  .co-applied.bad span{color:var(--sale)}
+  .co-applied .link{font-size:10.5px; flex:none}
+  
+  /* sticky mobile bar */
+  .co-mbar{position:fixed; z-index:44; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px var(--gutter) calc(10px + env(safe-area-inset-bottom,0px)); background:rgba(251,250,247,.97); backdrop-filter:blur(10px); border-top:1px solid var(--line)}
+  .co-mbar > div{display:flex; flex-direction:column; min-width:0; line-height:1.25}
+  .co-mbar b{font-size:16px; font-variant-numeric:tabular-nums}
+  .co-mbar small{font-size:11px; color:var(--ok); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .co-mbar .btn{height:44px; padding:0 18px; flex:none; max-width:62%; overflow:hidden; text-overflow:ellipsis}
+  /* the bag keeps the app bar; sit just above it */
+  .co-mbar.co-mbar-app{bottom:calc(55px + env(safe-area-inset-bottom,0px)); padding-bottom:10px}
+  .co-page:has(.co-mbar-app){padding-bottom:176px}
+  .co-desk-cta{display:none}
+  @media (min-width:900px){
+    .co-mbar{display:none}
+    .co-desk-cta{display:inline-flex}
+    .co-page:has(.co-mbar-app){padding-bottom:64px}
+  }
+  
+  /* rail */
+  .co-rail{margin-top:48px; display:flex; flex-direction:column; gap:18px}
+  
+  /* checkout */
+  .co-who{font-size:13.5px}
+  .co-who .link{margin-left:4px}
+  .co-addrs,.co-pay{display:flex; flex-direction:column; gap:10px}
+  .co-opt{display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line); padding:14px; cursor:pointer; transition:border-color .2s, background .2s}
+  .co-opt:hover{border-color:var(--muted)}
+  .co-opt.on{border-color:var(--ink); background:var(--stone)}
+  .co-opt input{width:16px; height:16px; margin:2px 0 0; accent-color:var(--ink); flex:none}
+  .co-opt > span{display:flex; flex-direction:column; gap:3px; min-width:0; font-size:13px}
+  .co-opt b{display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:13.5px}
+  .co-opt b svg{color:var(--bronze)}
+  .co-opt > span > span{color:var(--muted); overflow-wrap:anywhere}
+  .co-opt small{color:var(--muted)}
+  .co-def,.co-fee{font-style:normal; font-size:9.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; padding:2px 7px; border:1px solid var(--bronze); color:var(--bronze)}
+  .co-fee{border-color:var(--line); color:var(--muted)}
+  .co-pre{display:flex; border:1px solid var(--line); height:46px; background:var(--paper)}
+  .co-pre:focus-within{border-color:var(--ink)}
+  .co-pre span{display:grid; place-items:center; padding:0 12px; border-right:1px solid var(--line); background:var(--stone); font-size:13.5px; font-weight:600; color:var(--muted)}
+  .field .co-pre input{border:0; height:100%; min-width:0}
+  .field .co-pre input:focus{outline:none}
+  .field .co-pre:has(input[aria-invalid="true"]){border-color:var(--sale)}
+  .field select[aria-invalid="true"]{border-color:var(--sale)}
+  .check.full{grid-column:1/-1}
+  .co-eta{display:flex; align-items:center; gap:10px; margin:0; padding:12px 14px; border:1px solid var(--line); border-left:2px solid var(--bronze); font-size:13.5px}
+  .co-eta svg{color:var(--bronze)}
+  .co-recap{flex-direction:row; justify-content:space-between; align-items:flex-start}
+  .co-recap > div{display:flex; flex-direction:column; gap:8px; min-width:0; font-size:13.5px; overflow-wrap:anywhere}
+  .co-recap .link{flex:none}
+  .co-paynote{font-size:12.5px}
+  .co-terms{margin:0; font-size:12px; text-align:center}
+  .co-terms .link{font-size:10.5px; letter-spacing:.1em}
+  .co-main > .btn.co-desk-cta{height:52px}
+  
+  /* order items in sidebar and on confirmation */
+  .co-items{border:1px solid var(--line); padding:14px 16px; display:flex; flex-direction:column; gap:12px}
+  .co-items-head{display:flex; justify-content:space-between; align-items:center; gap:10px}
+  .co-items-head .link{font-size:10.5px}
+  .co-items ul,.co-olines{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; max-height:none}
+  @media (min-width:900px){ .co-items ul{max-height:280px; overflow-y:auto; padding-right:4px} }
+  .co-items li,.co-olines li{display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:12px; align-items:center}
+  .co-olines li{grid-template-columns:64px minmax(0,1fr) auto; padding-bottom:12px; border-bottom:1px solid var(--line)}
+  .co-olines li:last-child{border-bottom:0; padding-bottom:0}
+  .co-thumb{aspect-ratio:3/4; overflow:visible; display:block}
+  .co-thumb::after{inset:4px}
+  .co-thumb img{object-position:50% 20%}
+  .co-q{position:absolute; z-index:3; top:-7px; right:-7px; min-width:20px; height:20px; border-radius:99px; background:var(--ink); color:var(--on); font-size:10.5px; font-weight:700; display:grid; place-items:center; padding:0 5px}
+  .co-items li > div:nth-child(2),.co-olines li > div{display:flex; flex-direction:column; gap:2px; min-width:0}
+  .co-items b{font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .co-items small,.co-olines small{font-size:11.5px; color:var(--muted)}
+  .co-lp{font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap}
+  
+  /* confirmation */
+  .co-thanks{display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding-block:32px 26px; border-bottom:1px solid var(--line); margin-bottom:22px}
+  .co-thanks .h1{max-width:22ch}
+  .co-thanks .h1 i{font-family:var(--serif); text-transform:none; letter-spacing:0; color:var(--bronze); font-size:1.1em}
+  .co-thanks p{margin:0; max-width:56ch; color:var(--muted); font-size:14px}
+  .co-thanks .notice{color:var(--ink); text-align:left}
+  .co-tick{width:58px; height:58px; border-radius:50%; border:1px solid var(--bronze); display:grid; place-items:center; color:var(--bronze); position:relative}
+  .co-tick::after{content:""; position:absolute; inset:5px; border-radius:50%; border:1px solid var(--line)}
+  .co-num{color:var(--ink); letter-spacing:.1em; font-variant-numeric:tabular-nums}
+  .co-twin{display:grid; grid-template-columns:minmax(0,1fr); gap:16px}
+  @media (min-width:720px){ .co-twin{grid-template-columns:1fr 1fr} }
+  .co-twin p{font-size:13.5px; overflow-wrap:anywhere}
+  .co-links{display:flex; flex-direction:column; gap:10px}
+  .co-help{margin:0; font-size:12.5px}
+  .co-help .link{font-size:10.5px}
+  .co-conf .co-side{position:static}
+  @media (min-width:900px){ .co-conf .co-side{position:sticky} }
+
+  /* sale tag on bag lines, payment split, EMI note */
+  .co-salet{font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--sale); border:1px solid currentColor; padding:1px 6px}
+  .co-sum .co-split{font-size:12.5px}
+  .co-sum .co-split dt{color:var(--ink)}
+  .co-emi{margin:10px 0 0; display:flex; gap:8px; align-items:flex-start; font-size:12px; color:var(--muted)}
+  .co-emi svg{color:var(--bronze); margin-top:1px}
+  .co-count{display:block; font-size:11.5px; text-align:right}
+  .co-opt .co-save{color:var(--ok); font-weight:700}
+
+  /* COD phone verification */
+  .co-otp{display:flex; flex-direction:column; gap:10px; padding:14px; background:var(--stone); border-left:2px solid var(--bronze); font-size:13px}
+  .co-otp p{margin:0}
+  .co-otp-row{display:flex; gap:8px; flex-wrap:wrap}
+  .co-otp-row input{flex:1 1 140px; min-width:0; height:44px; border:1px solid var(--line); background:var(--paper); padding:0 12px; font-size:16px; letter-spacing:.3em; font-variant-numeric:tabular-nums}
+  .co-otp-row input:focus{outline:none; border-color:var(--ink)}
+  .co-otp-row .btn{height:44px; padding:0 18px}
+  .co-otp-send{align-self:flex-start; font-size:10.5px}
+  .co-otp-send:disabled{opacity:.5; cursor:default}
+  .co-ok{display:flex; align-items:center; gap:6px; color:var(--ok); font-weight:700; margin:0}
+
+  /* confirmation extras */
+  .co-giftmsg{font-family:var(--serif); font-style:italic; font-size:19px; color:var(--cocoa); overflow-wrap:anywhere}
+  .co-inv{align-self:center; font-size:10.5px}
+
+  /* printable invoice: hide the store chrome when printing */
+  @media print {
+    body:has(.inv-doc) :is(.ann, .head, .foot, .trust, .appbar, .appbar-space, .co-mbar, .adm-side, .adm-top, header.head, footer){display:none !important}
+    body:has(.inv-doc){background:#fff}
+  }
+}

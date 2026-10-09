@@ -1,0 +1,92 @@
+## Shipping Policy
+
+Last Updated: October 2026
+
+## 1. Shipping Within India
+
+- Shipping charges for India are shown at checkout where applicable.
+- Orders are processed within 1-2 business days of placement.
+- Delivery timeline: 5-7 business days from dispatch for metro cities, 7-10 business days for non-metro areas.
+- You will receive a tracking number via WhatsApp and email once your order is shipped.
+
+## 2. International Shipping (United Kingdom & Other Countries)
+
+- International shipping is available for customers in the United Kingdom and select countries.
+- United Kingdom delivery: Standard £3.99 (4–5 days) or Express £4.99 (1–2 days) per order.
+- UK delivery options: Standard (4–5 days) or Express (1–2 days).
+- Custom duties and import taxes (if applicable) are the responsibility of the customer.
+- Shipping charges are non-refundable.
+
+## Customs, Duties & International Charges
+
+- Muddhugumma may accept international orders for supported countries.
+- International orders may be fulfilled and shipped from India or another designated fulfilment location.
+- Customers must provide an accurate and complete shipping address.
+- Delivery timelines are estimates and may be affected by customs clearance, courier delays, local holidays or other circumstances outside Muddhugumma’s control.
+- International orders may be subject to customs duties, import taxes or local charges imposed by the destination country. Unless explicitly stated otherwise during checkout, these charges are the responsibility of the customer.
+
+## 3. Order Processing
+
+- Orders placed before 2:00 PM GMT are processed the same business day.
+- Orders placed after 2:00 PM GMT or on weekends/holidays are processed the next business day.
+- During festive seasons and sales events, processing may take an additional 1-2 business days.
+
+## 4. Tracking Your Order
+
+Once your order is shipped, you will receive:
+
+- A tracking number via WhatsApp and email
+- A link to track your order on our website (Order Tracking page)
+- Regular updates on delivery status
+
+## 5. Shipping Partners
+
+We ship through trusted courier partners including Delhivery, Bluedart, and India Post for domestic orders. International orders are shipped through DHL and India Post.
+
+## 6. Delivery Attempts
+
+Our courier partners will attempt delivery 3 times. If the delivery is unsuccessful after 3 attempts, the order will be returned to us. A re-shipment charge may apply.
+
+## 7. Address Accuracy
+
+Please ensure your shipping address is complete and accurate. House of Muddhugumma is not responsible for delays or non-delivery due to incorrect or incomplete addresses provided by the customer.
+
+## 8. Order Modifications
+
+Shipping address cannot be modified once the order is dispatched. Please contact us immediately at Houseofmuddhugumma@gmail.com or +91 7207798792 if you need to modify your address before dispatch.
+
+## 9. Contact
+
+For shipping-related queries, contact us at:
+
+- Email: Houseofmuddhugumma@gmail.com
+- Phone/WhatsApp: +91 7207798792
+- Working hours: Monday to Sunday, 9:00 AM to 9:00 PM GST
+
+House of Muddhugumma
+
+A unit of Vakiti Anand Reddy, Sole Proprietorship
+
+Udyam Registration No.: UDYAM-TS-12-0048360
+
+Registered Address: 8-13, Near Reddy Sangam, Muthyampet, Mallapur Mandal, Metpally, Jagitial, Telangana - 505331, India
+
+Business Phone/WhatsApp: +91 7207798792
+
+Email: Houseofmuddhugumma@gmail.com
+
+Support Hours: Monday to Sunday, 9:00 AM - 9:00 PM GMT
+
+UK & International Operations
+
+UK and international orders and payments are operated by HOUSE OF MUDDHUGUMMA LIMITED.
+
+Company Number: 17360109
+
+Private Limited Company registered in England and Wales
+
+Registered Office: 24 Kingswood Court, Grove Road, Luton, England, LU1 1BL
+
+Trading Brand: Muddhugumma
+
+© House of Muddhugumma. All rights reserved.

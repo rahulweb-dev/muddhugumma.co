@@ -1,0 +1,56 @@
+# Type check, unit tests and a production build on every push and pull request.
+# This file assumes the storefront folder is the repository root. If the repository root is the parent folder,
+# move .github/ up one level and uncomment `defaults.run.working-directory` below (and the cache path).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # defaults:
+    #   run:
+    #     working-directory: storefront
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          # cache-dependency-path: storefront/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Route and page types (.next/types, next-env.d.ts) are generated, not committed.
+      - name: Generate Next.js types
+        run: npx next typegen
+
+      - name: Type check
+        run: node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit -p .
+
+      - name: Unit tests
+        run: npx vitest run
+
+      # Every page reads the region cookie, so nothing touches MongoDB at build time: no MONGODB_URI needed.
+      # Placeholders only; real values live in the hosting provider's environment settings.
+      - name: Build
+        run: npx next build
+        env:
+          SEED_ON_EMPTY: "false"
+          AUTH_SECRET: ci-only-placeholder-secret-not-used-in-production-000000
+          NEXT_PUBLIC_SITE_URL: https://www.example.com
