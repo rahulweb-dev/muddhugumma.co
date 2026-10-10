@@ -27,7 +27,8 @@ export type AnalyticsEvent =
   | "purchase"
   | "search"
   | "sign_up"
-  | "generate_lead";
+  | "generate_lead"
+  | "share";
 
 /** GA4 ecommerce item. Only item_id and item_name are required. */
 export type AnalyticsItem = {
@@ -165,9 +166,10 @@ export const META_EVENT: Record<AnalyticsEvent, string> = {
   search: "Search",
   sign_up: "CompleteRegistration",
   generate_lead: "Schedule",
+  share: "Share", // custom: Meta has no standard share event
 };
 
-const META_CUSTOM = new Set<AnalyticsEvent>(["view_item_list"]);
+const META_CUSTOM = new Set<AnalyticsEvent>(["view_item_list", "share"]);
 
 /** Turns GA4-shaped data into Meta Pixel parameters. */
 export function metaParams(event: AnalyticsEvent, d: AnalyticsData): Record<string, unknown> {

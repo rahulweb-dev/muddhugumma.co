@@ -41,6 +41,24 @@
   
   /* ---------- info column ---------- */
   .pdp-info{display:flex; flex-direction:column; gap:12px; min-width:0}
+  /* share: small pill beside the kicker, opening a menu of channels */
+  .pdp-kick-row{display:flex; justify-content:space-between; align-items:center; gap:12px}
+  .share{position:relative; flex:none}
+  .share-btn{display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 14px; border:1px solid var(--line); border-radius:99px; background:var(--paper); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink); cursor:pointer; transition:border-color .2s}
+  .share-btn:hover,.share-btn[aria-expanded="true"]{border-color:var(--ink)}
+  .share-btn svg{width:16px; height:16px}
+  .share-menu{position:absolute; right:0; top:calc(100% + 8px); z-index:30; width:300px; max-width:calc(100vw - 32px); background:var(--paper); border:1px solid var(--line); box-shadow:0 18px 40px -18px rgba(0,0,0,.35); padding:12px; display:flex; flex-direction:column; gap:10px}
+  .share-native{display:flex; align-items:center; justify-content:center; gap:8px; height:44px; background:var(--ink); color:var(--on); border:0; font-size:13px; font-weight:700; cursor:pointer}
+  .share-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px}
+  .share-opt{display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 2px; min-height:44px; background:transparent; border:0; font-size:11.5px; color:var(--ink); cursor:pointer; border-radius:8px}
+  .share-opt:hover{background:var(--stone)}
+  .share-ic{width:40px; height:40px; border-radius:50%; display:grid; place-items:center; color:#FFFFFF; background:var(--ink)}
+  .share-opt.whatsapp .share-ic{background:#1F8F4E}
+  .share-opt.facebook .share-ic{background:#1877F2}
+  .share-opt.instagram .share-ic{background:radial-gradient(circle at 30% 107%,#FDD475 0%,#F86C3A 30%,#D92E7F 60%,#8A3AB9 90%)}
+  .share-opt.pinterest .share-ic{background:#C8102E}
+  .share-opt.x .share-ic{background:#111111}
+  .share-opt.email .share-ic,.share-opt.copy .share-ic{background:var(--stone-2); color:var(--ink)}
   .pdp-name{margin:0; font-family:var(--display); font-weight:400; text-transform:uppercase; letter-spacing:.06em; font-size:clamp(20px,2.4vw,28px); line-height:1.25; text-wrap:balance}
   .pdp-rate{display:flex; align-items:center; gap:14px; font-size:13px}
   .pdp-rate .link{font-size:10.5px}

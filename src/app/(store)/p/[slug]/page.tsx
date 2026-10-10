@@ -5,6 +5,7 @@ import { cache } from "react";
 import { Icon } from "@/components/Icon";
 import { ProductCard } from "@/components/ProductCard";
 import { BuyBox } from "@/components/product/BuyBox";
+import { ShareButton } from "@/components/product/ShareButton";
 import { Gallery } from "@/components/product/Gallery";
 import { RecentlyViewed } from "@/components/product/RecentlyViewed";
 import { ReviewForm } from "@/components/product/ReviewForm";
@@ -293,7 +294,10 @@ export default async function ProductPage({ params, searchParams }: { params: Pa
         <Gallery images={p.images} name={p.name} video={p.video} />
 
         <div className="pdp-info">
-          <span className="kick">House of Muddhugumma{p.craft ? ` · ${p.craft}` : ""}</span>
+          <div className="pdp-kick-row">
+            <span className="kick">House of Muddhugumma{p.craft ? ` · ${p.craft}` : ""}</span>
+            <ShareButton slug={p.slug} name={p.name} price={formatMoney(priceNow.now, region)} image={p.images[0] ? absImage(p.images[0]) : undefined} />
+          </div>
           <h1 className="pdp-name">{p.name}</h1>
           {p.ratingCount > 0 ? (
             <a className="pdp-rate" href="#reviews">
