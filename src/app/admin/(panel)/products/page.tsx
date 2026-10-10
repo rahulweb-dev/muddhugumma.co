@@ -29,6 +29,9 @@ export default async function AdminProducts({ searchParams }: { searchParams: SP
   const category = cats.some((c) => c.slug === cat) ? cat : "";
   const catName = (slug: string) => cats.find((c) => c.slug === slug)?.name ?? categoryLabel(slug);
   const low = first(sp.low) === "1";
+  const statusRaw = first(sp.status);
+  const status = statusRaw === "live" || statusRaw === "hidden" ? statusRaw : "";
+  const view = first(sp.view) === "list" ? "list" : "grid";
 
   await db();
   const { lowStockThreshold: t } = await getSettings();
@@ -36,12 +39,19 @@ export default async function AdminProducts({ searchParams }: { searchParams: SP
   if (q) filter.name = new RegExp(escapeRx(q), "i");
   if (category) filter.category = category;
   if (low) filter.$expr = lowStockExpr(t);
-  const [docs, lowCount] = await Promise.all([
+  if (status) filter.active = status === "live";
+  const [docs, lowCount, liveCount, hiddenCount] = await Promise.all([
     Product.find(filter).sort(low ? { active: -1, name: 1 } : { active: -1, createdAt: -1 }).limit(500).lean<ProductDoc[]>(),
     Product.countDocuments({ active: true, $expr: lowStockExpr(t) }),
+    Product.countDocuments({ active: true }),
+    Product.countDocuments({ active: false }),
   ]);
   const products = docs.map((d) => ({ ...toDTO(d, "in"), stockUk: stockFor(d, "uk") }));
-  const base = { q, category, low: low ? "1" : undefined };
+  const base = { q, category, low: low ? "1" : undefined, status: status || undefined, view: view === "list" ? "list" : undefined };
+  const regions = (["in", "uk"] as const).filter((r) => scope === "all" || r === scope);
+  const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "Free size"];
+  const sizesOf = (s: Record<string, number>, free: boolean) =>
+    (free ? ["Free size"] : SIZE_ORDER.slice(0, 6)).map((k) => [k, Number(s[k]) || 0] as const);
 
   return (
     <div className="adm-page">
@@ -57,13 +67,23 @@ export default async function AdminProducts({ searchParams }: { searchParams: SP
         </div>
       </header>
 
-      <nav className="adm-tabs" aria-label="Stock filter">
-        <Link href={`/admin/products${qs(base, { low: undefined })}`} aria-current={!low ? "page" : undefined}>All</Link>
-        <Link href={`/admin/products${qs(base, { low: "1" })}`} aria-current={low ? "page" : undefined}>Low stock · {t} or fewer <span>{lowCount}</span></Link>
-      </nav>
+      <div className="adm-row pg-bar">
+        <nav className="adm-tabs" aria-label="Show">
+          <Link href={`/admin/products${qs(base, { low: undefined, status: undefined })}`} aria-current={!low && !status ? "page" : undefined}>All <span>{liveCount + hiddenCount}</span></Link>
+          <Link href={`/admin/products${qs(base, { low: undefined, status: "live" })}`} aria-current={status === "live" && !low ? "page" : undefined}>Live <span>{liveCount}</span></Link>
+          <Link href={`/admin/products${qs(base, { low: undefined, status: "hidden" })}`} aria-current={status === "hidden" && !low ? "page" : undefined}>Hidden <span>{hiddenCount}</span></Link>
+          <Link href={`/admin/products${qs(base, { low: "1", status: undefined })}`} aria-current={low ? "page" : undefined}>Low stock · {t} or fewer <span>{lowCount}</span></Link>
+        </nav>
+        <div className="pg-view" role="group" aria-label="Layout">
+          <Link href={`/admin/products${qs(base, { view: undefined })}`} aria-current={view === "grid" ? "true" : undefined}><Icon name="grid" size={16} /> Grid</Link>
+          <Link href={`/admin/products${qs(base, { view: "list" })}`} aria-current={view === "list" ? "true" : undefined}><Icon name="menu" size={16} /> List</Link>
+        </div>
+      </div>
 
       <form className="adm-filters" method="get">
         {low && <input type="hidden" name="low" value="1" />}
+        {status && <input type="hidden" name="status" value={status} />}
+        {view === "list" && <input type="hidden" name="view" value="list" />}
         <div className="field grow">
           <label htmlFor="q">Search by name</label>
           <input id="q" name="q" type="search" defaultValue={q} placeholder="e.g. Banarasi" />
@@ -76,10 +96,52 @@ export default async function AdminProducts({ searchParams }: { searchParams: SP
           </select>
         </div>
         <button className="btn ghost adm-btn">Filter</button>
-        {(q || category || low) && <Link className="adm-more" href="/admin/products">Clear</Link>}
+        {(q || category || low || status) && <Link className="adm-more" href={`/admin/products${view === "list" ? "?view=list" : ""}`}>Clear</Link>}
       </form>
 
-      {products.length ? (
+      {products.length && view === "grid" ? (
+        <ul className="pg">
+          {products.map((p) => {
+            const stocks = regions.map((r) => {
+              const sizes = sizesOf(r === "uk" ? p.stockUk : p.stock, p.freeSize);
+              return { r, sizes, total: sizes.reduce((a, [, n]) => a + Math.max(0, n), 0), low: sizes.some(([, n]) => n <= t) };
+            });
+            const anyLow = stocks.some((x) => x.low);
+            return (
+              <li key={p.id} className={`pg-card${p.active ? "" : " off"}`}>
+                <Link className="pg-ph" href={`/admin/products/${p.id}`} aria-label={`Edit ${p.name}`}>
+                  {p.images[0] ? <Image src={p.images[0]} alt="" fill sizes="(min-width:1200px) 20vw, (min-width:720px) 30vw, 50vw" /> : <span className="pg-noimg">No photo</span>}
+                  <span className={`pg-state ${p.active ? "on" : ""}`}>{p.active ? "Live" : "Hidden"}</span>
+                  {anyLow && <span className="pg-lowtag">Low stock</span>}
+                </Link>
+                <div className="pg-body">
+                  <span className="pg-cat">{catName(p.category)}</span>
+                  <Link className="pg-name" href={`/admin/products/${p.id}`}>{p.name}</Link>
+                  <div className="pg-prices">
+                    <span><b>{formatMoney(p.price.in.now, "in")}</b>{p.price.in.mrp ? <s>{formatMoney(p.price.in.mrp, "in")}</s> : null}</span>
+                    <span><b>{formatMoney(p.price.uk.now, "uk")}</b>{p.price.uk.mrp ? <s>{formatMoney(p.price.uk.mrp, "uk")}</s> : null}</span>
+                  </div>
+                  {stocks.map((x) => (
+                    <div key={x.r} className="pg-stock">
+                      <div className="pg-stock-head"><span>{x.r === "uk" ? "🇬🇧 UK" : "🇮🇳 India"}</span><b className={x.total === 0 ? "out" : x.low ? "low" : ""}>{x.total} pcs</b></div>
+                      <div className="pg-sizes">
+                        {x.sizes.map(([k, n]) => (
+                          <span key={k} className={n <= 0 ? "out" : n <= t ? "low" : ""} title={`${k}: ${n}`}>{k === "Free size" ? "Free" : k} <b>{n}</b></span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="pg-foot">
+                  <ActiveSwitch id={p.id} active={p.active} kind="product" label={p.name} />
+                  <Link className="pg-btn" href={`/admin/stock?q=${encodeURIComponent(p.name)}`}>Stock</Link>
+                  <Link className="pg-btn dark" href={`/admin/products/${p.id}`}><Icon name="edit" size={14} /> Edit</Link>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : products.length ? (
         <div className="table-wrap adm-card flush">
           <table className="t adm-t">
             <thead>
