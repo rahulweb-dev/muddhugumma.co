@@ -190,4 +190,56 @@
 .ac-seg label.on{background:var(--ink); border-color:var(--ink); color:var(--on)}
 .ac-seg label:focus-within{outline:2px solid var(--bronze); outline-offset:2px}
 .ac-seg input{position:absolute; opacity:0; pointer-events:none}
+
+/* ---------- overview (option B: live order + tiles) ---------- */
+@media (max-width:1023px){ .ac-nav.is-home{display:none} }
+.acx{display:flex; flex-direction:column; gap:18px; min-width:0}
+.acx-head{display:flex; justify-content:space-between; align-items:center; gap:12px}
+.acx-head > div{display:flex; flex-direction:column; gap:2px; min-width:0}
+.acx-hello{margin:0; font-family:var(--serif); font-style:italic; font-weight:500; font-size:clamp(30px,6vw,40px); line-height:1.05}
+.acx-hello i{color:var(--bronze-ink)}
+.acx-avatar{flex:none; width:48px; height:48px; border-radius:50%; background:var(--ink); color:var(--on); display:grid; place-items:center; font-family:var(--display); font-size:19px}
+.acx-live{display:flex; flex-direction:column; gap:14px; padding:16px; border-radius:18px; background:var(--ink); color:#FBFAF7}
+.acx-live:hover{color:#FBFAF7; box-shadow:0 14px 30px -18px rgba(0,0,0,.6)}
+.acx-live-top{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.acx-live-kick{font-size:11.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#C9A97E}
+.acx-live-no{font-size:12.5px; color:#CFC8BC}
+.acx-live-main{display:flex; gap:12px; align-items:center}
+.acx-live-img{width:52px; height:66px; object-fit:cover; border-radius:8px; flex:none}
+.acx-live-main div{display:flex; flex-direction:column; gap:3px; min-width:0}
+.acx-live-main b{font-size:17px}
+.acx-live-main span{font-size:13px; color:#CFC8BC}
+.acx-steps{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px}
+.acx-steps span{height:5px; border-radius:99px; background:#4A4540}
+.acx-steps span.on{background:#7FD08F}
+.acx-step-labels{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); font-size:10.5px; color:#A9A296}
+.acx-step-labels span:last-child{text-align:right}
+.acx-empty{display:flex; flex-direction:column; gap:6px; align-items:flex-start; padding:18px; border-radius:18px; background:#F2EEE8}
+.acx-empty span{color:var(--muted); font-size:14px}
+.acx-empty .btn{margin-top:8px}
+.acx-tiles{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+@media (min-width:1024px){ .acx-tiles{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.acx-tile{display:flex; flex-direction:column; gap:8px; padding:16px; border-radius:16px; min-height:120px; transition:transform .15s, box-shadow .15s}
+.acx-tile:hover{transform:translateY(-1px); box-shadow:0 10px 24px -18px rgba(0,0,0,.5)}
+.acx-tile b{font-size:15px}
+.acx-tile small{font-size:12.5px; line-height:1.35}
+.acx-tile.blue{background:#EAF1FB} .acx-tile.blue svg{color:#1F4E8C} .acx-tile.blue small{color:#46576E}
+.acx-tile.pink{background:#FBE9EE} .acx-tile.pink svg{color:#9E2A4F} .acx-tile.pink small{color:#73485A}
+.acx-tile.gold{background:#FBF1DE} .acx-tile.gold svg{color:#8A5A00} .acx-tile.gold small{color:#6E5A33}
+.acx-tile.green{background:#E8F3EC} .acx-tile.green svg{color:#2F6B3F} .acx-tile.green small{color:#3E5E46}
+.acx-tile.stone{background:#F2EEE8} .acx-tile.stone svg{color:#5B3A22} .acx-tile.stone small{color:var(--muted)}
+.acx-sec-head{display:flex; justify-content:space-between; align-items:baseline}
+.acx-sec-head h2{margin:0; font-size:16px}
+.acx-sec-head a{font-size:13px; font-weight:700; color:var(--bronze-ink)}
+.acx-saved{display:flex; flex-direction:column; gap:10px}
+.acx-saved-row{display:flex; gap:12px; align-items:center; padding:10px; border-radius:14px; border:1px solid var(--line); background:#FFFFFF}
+.acx-saved-row img{width:50px; height:64px; object-fit:cover; border-radius:8px; flex:none}
+.acx-saved-row > span:not(.acx-saved-cta){flex:1; display:flex; flex-direction:column; gap:3px; min-width:0}
+.acx-saved-row b{font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.acx-saved-row small{color:var(--muted); font-size:12.5px}
+.acx-saved-cta{flex:none; height:36px; padding:0 16px; display:inline-flex; align-items:center; border-radius:99px; background:var(--ink); color:var(--on); font-size:12px; font-weight:800}
+.acx-wa{display:flex; align-items:center; justify-content:center; gap:8px; height:48px; border-radius:14px; background:#E7F3EA; color:#1F5A31; font-weight:700; font-size:14px}
+.acx-wa:hover{color:#1F5A31; background:#DCEEE1}
+.acx-out{display:flex; justify-content:center}
+.acx-out button{height:44px; padding:0 18px; border:0; background:transparent; font-weight:700; font-size:13px; color:var(--muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer}
 }

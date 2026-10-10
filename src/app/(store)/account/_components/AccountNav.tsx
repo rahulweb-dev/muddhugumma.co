@@ -17,7 +17,8 @@ const LINKS: { href: string; label: string; icon: IconName; exact?: boolean }[] 
 export function AccountNav({ name, email }: { name: string; email: string }) {
   const path = usePathname();
   return (
-    <nav className="ac-nav" aria-label="Your account">
+    // On the overview the tiles are the menu, so phones skip this one there (desktop keeps it as a sidebar).
+    <nav className={`ac-nav${path === "/account" ? " is-home" : ""}`} aria-label="Your account">
       <div className="ac-who">
         <span className="ac-mono" aria-hidden="true">{name.trim().charAt(0).toUpperCase() || "M"}</span>
         <div>
