@@ -178,6 +178,7 @@
   .pc .ph img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 20%; transition:opacity .5s, transform .9s cubic-bezier(.2,.7,.2,1)}
   .pc .ph img.alt{opacity:0}
   .pc:hover .ph img.alt{opacity:1}
+  @media (hover:none){ .pc .ph img.alt{display:none} }
   .pc:hover .ph img.main{transform:scale(1.05)}
   .pc .ph::after{content:""; position:absolute; inset:8px; border:1px solid rgba(255,255,255,0); transition:border-color .4s; pointer-events:none; z-index:1}
   .pc:hover .ph::after{border-color:rgba(255,255,255,.75)}
@@ -239,6 +240,9 @@
     .tr:nth-child(2n){border-right:1px solid var(--line)}
     .tr:last-child{border-right:0}
   }
+  /* Below-the-fold sections render (and load their images) only when scrolled near: faster first paint on phones.
+     contain-intrinsic-size reserves roughly the right height so the scrollbar doesn't jump. */
+  .foot,.trust{content-visibility:auto; contain-intrinsic-size:auto 640px}
   .foot{background:var(--ink); color:#D9D3C9; padding-block:40px 100px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:30px 16px; font-size:13px}
   .foot .fb{grid-column:1/-1; display:flex; flex-direction:column; gap:10px}
   .geo-locate{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px}

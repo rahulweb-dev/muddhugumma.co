@@ -17,8 +17,10 @@ import "./globals.css";
 
 const tenor = Tenor_Sans({ weight: "400", subsets: ["latin"], variable: "--font-tenor", display: "swap" });
 const karla = Karla({ subsets: ["latin"], variable: "--font-karla", display: "swap" });
-const cormorant = Cormorant_Garamond({ weight: ["500"], style: ["normal", "italic"], subsets: ["latin"], variable: "--font-cormorant", display: "swap" });
-const pinyon = Pinyon_Script({ weight: "400", subsets: ["latin"], variable: "--font-pinyon", display: "swap" });
+// Accent fonts (italic serif words, script logo) are not preloaded, so on slow phones they don't queue ahead of the
+// first product photo; they still load from the stylesheet and swap in a moment later.
+const cormorant = Cormorant_Garamond({ weight: ["500"], style: ["normal", "italic"], subsets: ["latin"], variable: "--font-cormorant", display: "swap", preload: false });
+const pinyon = Pinyon_Script({ weight: "400", subsets: ["latin"], variable: "--font-pinyon", display: "swap", preload: false });
 
 /** ImageKit origin (e.g. https://ik.imagekit.io), so the browser opens the connection before the first product photo. */
 const IMAGE_ORIGIN = (() => {

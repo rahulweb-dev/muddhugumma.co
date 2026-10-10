@@ -11,6 +11,13 @@ export function HeroSlider({ slides: SLIDES }: { slides: HomeSlide[] }) {
   const [paused, setPaused] = useState(false);
   const [tick, setTick] = useState(0); // restarts the progress bar animation
   const x0 = useRef<number | null>(null);
+  // The other slides sit on top of the first (hidden), so the browser would fetch their photos straight away and
+  // slow the first one down on mobile. Load them shortly after, well before the first change at 6 s.
+  const [later, setLater] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLater(true), 2500);
+    return () => clearTimeout(t);
+  }, []);
   const go = useCallback(
     (i: number) => {
       setCur((i + SLIDES.length) % SLIDES.length);
@@ -58,7 +65,9 @@ export function HeroSlider({ slides: SLIDES }: { slides: HomeSlide[] }) {
               </div>
               <div className="pic">
                 <div className="mount arch">
-                  <Image src={s.image} alt={s.alt ?? ""} fill priority={i === 0} loading={i === 0 ? "eager" : "lazy"} sizes="(min-width:720px) 52vw, 100vw" />
+                  {(i === 0 || later || i === cur) && (
+                    <Image src={s.image} alt={s.alt ?? ""} fill priority={i === 0} loading={i === 0 ? "eager" : "lazy"} sizes="(min-width:720px) 52vw, 100vw" />
+                  )}
                 </div>
               </div>
             </div>

@@ -1,4 +1,7 @@
 @layer components {
+  /* below the fold on phones: render (and load images) only when scrolled near */
+  .prods,.pp,.craft,.home-lb,.home-jr,.social{content-visibility:auto; contain-intrinsic-size:auto 720px}
+
   /* hero slider */
   .hero{position:relative; background:var(--stone)}
   .slides{display:grid}

@@ -120,6 +120,8 @@
   /* accordions */
   .acc{margin-top:10px; border-top:1px solid var(--ink)}
   .acc details{border-bottom:1px solid var(--line)}
+  /* reviews and product rails sit below the fold: render when scrolled near */
+  .pdp-sec{content-visibility:auto; contain-intrinsic-size:auto 560px}
   .acc summary{list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:16px 0; font-family:var(--display); font-size:12.5px; letter-spacing:.16em; text-transform:uppercase}
   .acc summary::-webkit-details-marker{display:none}
   .acc summary svg{transition:transform .25s; color:var(--muted)}

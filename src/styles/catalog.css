@@ -168,7 +168,7 @@
   @media (max-width:719px){ .look-pick{flex-direction:column; align-items:stretch; gap:8px} }
 
   /* ---------- guide + FAQs under the grid ---------- */
-  .plp-guide{display:grid; grid-template-columns:minmax(0,1fr); gap:28px; margin:48px 0 24px; padding-top:32px; border-top:1px solid var(--line)}
+  .plp-guide{content-visibility:auto; contain-intrinsic-size:auto 600px; display:grid; grid-template-columns:minmax(0,1fr); gap:28px; margin:48px 0 24px; padding-top:32px; border-top:1px solid var(--line)}
   .plp-guide p{color:var(--muted); line-height:1.7; margin:10px 0 0; max-width:62ch}
   .plp-faq details{border-bottom:1px solid var(--line)}
   .plp-faq summary{list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 0; font-weight:600; font-size:14px}
