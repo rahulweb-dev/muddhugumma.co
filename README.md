@@ -75,6 +75,16 @@ Without provider keys, emails / WhatsApp / SMS are written to **Admin → Messag
 
 Checks: `npm run typecheck`, `npm test`, `npm run lint`, `npm run build`. Database test scripts: `scripts/test-*.mts` (run with `node --env-file=.env.local --conditions=react-server --import tsx scripts/<name>.mts`; they only create and delete TEST data).
 
+## Uptime monitoring
+
+- `GET /api/health` answers `200 {"ok":true,"database":"ok"}` when the site and MongoDB both work, `503` otherwise.
+- `.github/workflows/uptime.yml` checks `/`, `/c/sarees` and `/api/health` every 10 minutes (repo secret `SITE_URL`). A failure retries once a minute later; if it still fails the run fails and GitHub emails you (GitHub → Settings → Notifications → Actions → failed workflows).
+- For alerts within minutes, on your phone too, add a free UptimeRobot monitor:
+  1. Sign up at uptimerobot.com and choose **Add New Monitor**.
+  2. Type **HTTP(s)**, URL `https://www.muddhugumma.co/api/health`, interval **5 minutes**.
+  3. Under alert contacts, add your email and install the UptimeRobot app for push notifications.
+  4. Optionally add a second monitor for `https://www.muddhugumma.co/` (the home page).
+
 ## Before launch
 
 - Set `AUTH_SECRET`, `MONGODB_URI`, `NEXT_PUBLIC_SITE_URL` and change the admin password.

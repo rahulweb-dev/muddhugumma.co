@@ -1,0 +1,41 @@
+# Free uptime monitor. Every 10 minutes it checks the shop's home page, a category page and /api/health (site +
+# database). If any check fails twice in a row (a minute apart), this run fails and GitHub emails you
+# (GitHub → Settings → Notifications → Actions: "Send notifications for failed workflows only").
+# Needs the repo secret SITE_URL (e.g. https://www.muddhugumma.co), the same one the scheduled jobs use.
+# GitHub may start scheduled runs a few minutes late; for minute-level alerts add UptimeRobot too (see README).
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the shop is up
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then echo "Add the SITE_URL repo secret."; exit 1; fi
+          base="${SITE_URL%/}"
+          check() {
+            # $1 = path. Two tries a minute apart, so one slow response doesn't raise an alarm.
+            for try in 1 2; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 -A "muddhugumma-uptime" "$base$1" || echo 000)
+              if [ "$code" = "200" ]; then echo "OK   $1 ($code)"; return 0; fi
+              echo "Try $try: $1 answered $code"
+              [ "$try" = "1" ] && sleep 60
+            done
+            echo "DOWN $1"; return 1
+          }
+          failed=0
+          check "/" || failed=1
+          check "/c/sarees" || failed=1
+          check "/api/health" || failed=1
+          if [ "$failed" = "1" ]; then
+            echo "::error::House of Muddhugumma looks down. Check Vercel (Deployments, Logs) and MongoDB Atlas."
+            exit 1
+          fi
