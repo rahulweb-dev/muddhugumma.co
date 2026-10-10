@@ -612,13 +612,14 @@ const CategorySchema = schema(
     kicker: { type: String, default: "" }, // small line above the listing heading
     blurb: { type: String, default: "" },
     image: { type: String, default: "" }, // ImageKit path
+    imageFocus: { type: String, enum: ["top", "upper", "center", "lower", "bottom"], default: "top" }, // which part stays visible when cropped
     sort: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
     inNav: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
-export type CategoryDoc = Stamps & { slug: string; name: string; kicker?: string; blurb?: string; image?: string; sort: number; active: boolean; inNav: boolean };
+export type CategoryDoc = Stamps & { slug: string; name: string; kicker?: string; blurb?: string; image?: string; imageFocus?: string; sort: number; active: boolean; inNav: boolean };
 export const Category: Model<CategoryDoc> = m.Category ?? mongoose.model<CategoryDoc>("Category", CategorySchema);
 
 /* ---------- Editable pages (about, policies, FAQ) ---------- */

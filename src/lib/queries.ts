@@ -58,7 +58,7 @@ export function toDTO(p: ProductDoc, region: Region): ProductDTO {
 export type ProductFull = ProductDTO & { video: string; madeToOrder: boolean };
 
 /* ---------- listing ---------- */
-export type Listing = { title: string; kicker: string; blurb: string; match: Record<string, unknown>; image?: string };
+export type Listing = { title: string; kicker: string; blurb: string; match: Record<string, unknown>; image?: string; imageFocus?: string };
 
 /** Listings that are not a single category. Category listings come from the Category collection (Admin → Categories). */
 export const SPECIAL_LISTINGS: Record<string, Listing> = {
@@ -73,7 +73,7 @@ export const SPECIAL_LISTINGS: Record<string, Listing> = {
 export async function getListing(slug: string): Promise<Listing | null> {
   if (SPECIAL_LISTINGS[slug]) return SPECIAL_LISTINGS[slug];
   const c = await getCategory(slug);
-  return c ? { title: c.name, kicker: c.kicker || "Shop", blurb: c.blurb, match: { category: c.slug }, image: c.image || undefined } : null;
+  return c ? { title: c.name, kicker: c.kicker || "Shop", blurb: c.blurb, match: { category: c.slug }, image: c.image || undefined, imageFocus: c.imageFocus } : null;
 }
 
 export type ListingQuery = {

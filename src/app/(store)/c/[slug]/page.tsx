@@ -16,6 +16,7 @@ import { categoryContent } from "@/lib/category-content";
 import { Icon } from "@/components/Icon";
 import { LookPicker } from "@/components/catalog/LookPicker";
 import { LOOKS, LOOK_COOKIE } from "@/components/catalog/looks";
+import { focusPosition } from "@/lib/image-focus";
 
 type Params = Promise<{ slug: string }>;
 type Search = Promise<RawParams>;
@@ -78,7 +79,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
 
       <header className="plp-head">
         <div className="mount plp-ban">
-          <Image src={l.image || "banners/plp-banner.webp"} alt="" fill sizes="(min-width:900px) 40vw, 100vw" priority />
+          <Image src={l.image || "banners/plp-banner.webp"} alt="" fill sizes="(min-width:900px) 40vw, 100vw" priority style={{ objectPosition: focusPosition(l.imageFocus) }} />
         </div>
         <div className="plp-copy">
           <span className="kick">{l.kicker}</span>

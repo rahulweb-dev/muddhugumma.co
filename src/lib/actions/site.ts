@@ -8,6 +8,7 @@ import { Category, Page, Product } from "@/lib/models";
 import { logActivity } from "@/lib/audit";
 import { saveSettings } from "@/lib/settings";
 import { SLUG_RX, type Result } from "@/components/admin/content/shared";
+import { IMAGE_FOCUS_VALUES } from "@/lib/image-focus";
 
 /* Storefront structure and copy: categories (products.manage), pages and homepage (content.manage). */
 
@@ -41,6 +42,7 @@ const CategorySchema = z.object({
   kicker: z.string().trim().max(60),
   blurb: z.string().trim().max(300, "Keep the description under 300 characters."),
   image: imagePath,
+  imageFocus: z.enum(IMAGE_FOCUS_VALUES).default("top"),
   sort: z.number().int("Use a whole number.").min(0).max(999),
   active: z.boolean(),
   inNav: z.boolean(),

@@ -3,13 +3,13 @@ import { cache } from "react";
 import { db } from "./db";
 import { Category, type CategoryDoc } from "./models";
 
-export type CategoryDTO = { slug: string; name: string; kicker: string; blurb: string; image: string; sort: number; active: boolean; inNav: boolean };
+export type CategoryDTO = { slug: string; name: string; kicker: string; blurb: string; image: string; imageFocus: string; sort: number; active: boolean; inNav: boolean };
 
 // Used only until the first category is saved in Admin → Categories (or imported), so a fresh database still has a menu.
 const STARTER: CategoryDTO[] = [
-  { slug: "sarees", name: "Sarees", kicker: "Six yards of craft", blurb: "", image: "", sort: 0, active: true, inNav: true },
-  { slug: "kurta-sets", name: "Kurta Sets", kicker: "Office to evening", blurb: "", image: "", sort: 1, active: true, inNav: true },
-  { slug: "lehengas", name: "Lehengas", kicker: "Bridal & occasion", blurb: "", image: "", sort: 2, active: true, inNav: true },
+  { slug: "sarees", name: "Sarees", kicker: "Six yards of craft", blurb: "", image: "", imageFocus: "top", sort: 0, active: true, inNav: true },
+  { slug: "kurta-sets", name: "Kurta Sets", kicker: "Office to evening", blurb: "", image: "", imageFocus: "top", sort: 1, active: true, inNav: true },
+  { slug: "lehengas", name: "Lehengas", kicker: "Bridal & occasion", blurb: "", image: "", imageFocus: "top", sort: 2, active: true, inNav: true },
 ];
 
 const toDTO = (c: CategoryDoc): CategoryDTO => ({
@@ -18,6 +18,7 @@ const toDTO = (c: CategoryDoc): CategoryDTO => ({
   kicker: c.kicker ?? "",
   blurb: c.blurb ?? "",
   image: c.image ?? "",
+  imageFocus: c.imageFocus ?? "top",
   sort: c.sort ?? 0,
   active: c.active !== false,
   inNav: c.inNav !== false,

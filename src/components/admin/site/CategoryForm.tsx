@@ -1,11 +1,13 @@
 "use client";
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteCategory, saveCategory } from "@/lib/actions/site";
 import { ImageField, Msg, fieldErr } from "../content/ui";
 import { slugify, type Result } from "../content/shared";
+import { IMAGE_FOCUS, focusPosition, type ImageFocus } from "@/lib/image-focus";
 
-export type CategoryView = { id: string; name: string; slug: string; kicker: string; blurb: string; image: string; sort: number; active: boolean; inNav: boolean };
+export type CategoryView = { id: string; name: string; slug: string; kicker: string; blurb: string; image: string; imageFocus: string; sort: number; active: boolean; inNav: boolean };
 
 export function CategoryForm({ category, productCount, nextSort, uploadsEnabled }: { category: CategoryView | null; productCount: number; nextSort: number; uploadsEnabled: boolean }) {
   const router = useRouter();
@@ -15,6 +17,7 @@ export function CategoryForm({ category, productCount, nextSort, uploadsEnabled 
     kicker: category?.kicker ?? "",
     blurb: category?.blurb ?? "",
     image: category?.image ?? "",
+    imageFocus: (category?.imageFocus ?? "top") as ImageFocus,
     sort: String(category?.sort ?? nextSort),
     active: category?.active ?? true,
     inNav: category?.inNav ?? true,
@@ -89,6 +92,18 @@ export function CategoryForm({ category, productCount, nextSort, uploadsEnabled 
         </div>
         <ImageField id="c-image" label="Image (category page banner and homepage tile)" value={f.image} onChange={(v) => set("image", v)} folder="/categories" uploadsEnabled={uploadsEnabled} placeholder="categories/sarees.jpg" aspect="aspect-[3/4]" />
         <small className="muted">No image? The homepage uses the newest product&apos;s photo instead.</small>
+        <div className="field">
+          <label htmlFor="c-focus">Photo focus (what stays visible when the photo is cropped)</label>
+          <select id="c-focus" value={f.imageFocus} onChange={(e) => set("imageFocus", e.target.value as ImageFocus)}>
+            {IMAGE_FOCUS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          {f.image ? (
+            <div className="cat-focus-preview" aria-label="Banner preview">
+              <span>Banner preview</span>
+              <div><Image src={f.image} alt="" fill sizes="420px" style={{ objectFit: "cover", objectPosition: focusPosition(f.imageFocus) }} /></div>
+            </div>
+          ) : null}
+        </div>
         {fieldErr(res, "image")}
         <label className="check">
           <input type="checkbox" checked={f.active} onChange={(e) => set("active", e.target.checked)} /> Live in the shop

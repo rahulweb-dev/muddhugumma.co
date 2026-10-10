@@ -21,7 +21,7 @@ export default async function AdminCategory({ params }: { params: Promise<{ id: 
     if (!mongoose.isValidObjectId(id)) notFound();
     const c = await Category.findById(id).lean<CategoryDoc & { _id: Types.ObjectId }>();
     if (!c) notFound();
-    view = { id: String(c._id), name: c.name, slug: c.slug, kicker: c.kicker ?? "", blurb: c.blurb ?? "", image: c.image ?? "", sort: c.sort ?? 0, active: c.active !== false, inNav: c.inNav !== false };
+    view = { id: String(c._id), name: c.name, slug: c.slug, kicker: c.kicker ?? "", blurb: c.blurb ?? "", image: c.image ?? "", imageFocus: c.imageFocus ?? "top", sort: c.sort ?? 0, active: c.active !== false, inNav: c.inNav !== false };
     products = await Product.countDocuments({ category: c.slug });
   } else {
     const last = await Category.findOne({}, { sort: 1 }).sort({ sort: -1 }).lean<{ sort?: number }>();

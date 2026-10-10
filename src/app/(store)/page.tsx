@@ -12,6 +12,7 @@ import { BRAND, SITE, absImage, ldJson } from "@/lib/seo";
 import { REGION_CONFIG } from "@/lib/region";
 import { BASE_KEYWORDS, pageMeta } from "@/lib/seo-meta";
 import "@/styles/home.css";
+import { focusPosition } from "@/lib/image-focus";
 
 const BENTO = ["big", "", "tall", ""]; // tile shapes, in category order
 
@@ -96,7 +97,7 @@ export default async function HomePage() {
         <div className="cat-row">
           {shown.map((c) => (
             <Link className="cat" href={`/c/${c.slug}`} key={c.slug}>
-              <span className="cat-ring"><span><Image src={c.image} alt="" fill sizes="104px" /></span></span>
+              <span className="cat-ring"><span><Image src={c.image} alt="" fill sizes="104px" style={{ objectPosition: focusPosition(c.imageFocus) }} /></span></span>
               {c.name}
             </Link>
           ))}
@@ -111,7 +112,7 @@ export default async function HomePage() {
         <div className="bento">
           {shown.slice(0, 4).map((c, i) => (
             <Link className={`tile ${BENTO[i]}`} href={`/c/${c.slug}`} key={c.slug}>
-              <div className="mount"><Image src={c.image} alt="" fill sizes={i === 0 ? "(min-width:720px) 45vw, 100vw" : "(min-width:720px) 27vw, 50vw"} /></div>
+              <div className="mount"><Image src={c.image} alt="" fill sizes={i === 0 ? "(min-width:720px) 45vw, 100vw" : "(min-width:720px) 27vw, 50vw"} style={{ objectPosition: focusPosition(c.imageFocus) }} /></div>
               <div className="cap">{c.kicker && <small>{c.kicker}</small>}<b>{c.name}</b>{i % 2 === 0 && <em>Shop now</em>}</div>
             </Link>
           ))}
