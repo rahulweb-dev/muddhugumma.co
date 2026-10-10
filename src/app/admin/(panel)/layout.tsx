@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { requireAdmin } from "@/lib/auth";
 import { ROLE_LABEL, isStaff } from "@/lib/permissions";
-import { AdminNav } from "@/components/admin/AdminNav";
+import { AdminNav, AdminSideShell } from "@/components/admin/AdminNav";
 import { Icon } from "@/components/Icon";
 import { adminLogout } from "@/lib/actions/auth";
 import { AdminTopBar } from "@/components/admin/AdminTopBar";
-import { getAdminScope, getStoreLock } from "@/lib/admin-scope";
+import { REGION_FLAG, REGION_NAME, getAdminScope, getStoreLock } from "@/lib/admin-scope";
+import { navCounts } from "@/lib/admin-nav-counts";
 import "@/styles/admin.css";
 
 export const metadata: Metadata = {
@@ -16,28 +18,35 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const [admin, scope, lock] = await Promise.all([requireAdmin(), getAdminScope(), getStoreLock()]);
+  const counts = await navCounts(admin.role, scope);
   const roleLabel = isStaff(admin.role) ? ROLE_LABEL[admin.role] : "";
   return (
     <div className="adm print:block print:bg-white">
-      <aside className="adm-side print:hidden">
+      <AdminSideShell>
         <Link href="/admin" className="adm-brand">
-          <strong>Muddhugumma</strong>
-          <small>Admin</small>
-          <span className="adm-brand-role">{admin.name.split(" ")[0]} · {roleLabel}</span>
+          <Image src="brand/logo.webp" alt="" width={44} height={44} quality={90} className="adm-brand-logo" />
+          <span>
+            <strong>Muddhugumma</strong>
+            <small>{scope === "all" ? "Admin · India & UK" : `Admin · ${REGION_FLAG[scope]} ${REGION_NAME[scope]}`}</small>
+          </span>
         </Link>
-        <AdminNav role={admin.role} />
-        <div className="adm-who">
-          <span className="adm-avatar" aria-hidden="true">{admin.name.slice(0, 1).toUpperCase()}</span>
-          <div>
-            <b>{admin.name}</b>
-            <small className="adm-role">{roleLabel}</small>
-            <small title={admin.email}>{admin.email}</small>
+        <AdminNav role={admin.role} counts={counts} />
+        <div className="adm-side-foot">
+          <Link href="/" className="adm-store" target="_blank">
+            <Icon name="globe" size={17} /> View the shop
+          </Link>
+          <div className="adm-who">
+            <span className="adm-avatar" aria-hidden="true">{admin.name.slice(0, 1).toUpperCase()}</span>
+            <div>
+              <b>{admin.name}</b>
+              <small className="adm-role">{roleLabel}{lock ? ` · ${REGION_NAME[lock]} only` : ""}</small>
+            </div>
+            <form action={adminLogout} className="ml-auto">
+              <button type="submit" className="adm-icon-btn adm-logout" aria-label="Sign out" title="Sign out"><Icon name="logout" size={16} /></button>
+            </form>
           </div>
-          <form action={adminLogout} className="ml-auto">
-            <button type="submit" className="adm-icon-btn" aria-label="Sign out" title="Sign out"><Icon name="logout" size={16} /></button>
-          </form>
         </div>
-      </aside>
+      </AdminSideShell>
       <main className="adm-main">
         <AdminTopBar scope={scope} locked={!!lock} />
         {children}

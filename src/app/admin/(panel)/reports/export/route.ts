@@ -5,6 +5,7 @@ import { Order } from "@/lib/models";
 import { toCsv } from "@/lib/csv";
 import type { LeanOrder } from "@/lib/admin-data";
 import { resolveRange } from "../data";
+import { getStoreLock } from "@/lib/admin-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,9 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const range = resolveRange({ from: url.searchParams.get("from") ?? "", to: url.searchParams.get("to") ?? "", range: url.searchParams.get("range") ?? "" });
   await db();
-  const orders = await Order.find({ createdAt: { $gte: range.start, $lt: range.end } }).sort({ createdAt: 1 }).limit(50_000).lean<LeanOrder[]>();
+  // Staff locked to one country only ever export that country.
+  const lock = await getStoreLock();
+  const orders = await Order.find({ ...(lock ? { region: lock } : {}), createdAt: { $gte: range.start, $lt: range.end } }).sort({ createdAt: 1 }).limit(50_000).lean<LeanOrder[]>();
   const header = [
     "order_number", "placed_at", "region", "currency", "status", "payment_method", "payment_status", "customer_name", "email", "phone", "city", "state", "postcode",
     "pieces", "subtotal", "discount", "coupon", "prepaid_discount", "points_discount", "gift_wrap_fee", "shipping", "cod_fee", "gift_card", "total", "cod_due", "invoice_number",

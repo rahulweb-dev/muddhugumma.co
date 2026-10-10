@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/components/Icon";
 import { can, type Permission } from "@/lib/permissions";
 
@@ -75,7 +76,7 @@ const GROUPS: NavGroup[] = [
 
 const ALL_HREFS = GROUPS.flatMap((g) => g.links.map((l) => l.href));
 
-export function AdminNav({ role }: { role: string }) {
+export function AdminNav({ role, counts = {} }: { role: string; counts?: Record<string, number> }) {
   const path = usePathname() || "/admin";
   // The most specific matching link wins, so /admin/products/import doesn't also light up Products.
   const match = ALL_HREFS.filter((h) => (h === "/admin" ? path === "/admin" : path === h || path.startsWith(h + "/"))).sort((a, b) => b.length - a.length)[0];
@@ -88,15 +89,42 @@ export function AdminNav({ role }: { role: string }) {
           {g.links.map((l) => (
             <Link key={l.href} href={l.href} aria-current={match === l.href ? "page" : undefined}>
               <Icon name={l.icon} size={18} />
-              <span>{l.label}</span>
+              <span className="adm-nav-text">{l.label}</span>
+              {counts[l.href] ? <span className="adm-nav-badge" aria-label={`${counts[l.href]} waiting`}>{counts[l.href] > 99 ? "99+" : counts[l.href]}</span> : null}
             </Link>
           ))}
         </div>
       ))}
-      <Link href="/" className="adm-store">
-        <Icon name="home" size={18} />
-        <span>View store</span>
-      </Link>
     </nav>
+  );
+}
+
+/** Phones and tablets: a top bar with a Menu button that slides the sidebar in. Desktop: the sidebar is always there. */
+export function AdminSideShell({ children }: { children: React.ReactNode }) {
+  const path = usePathname();
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    if (!open) return;
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [open]);
+  return (
+    <>
+      <div className="adm-mbar print:hidden">
+        <button type="button" className="adm-mbar-btn" aria-label="Open menu" aria-expanded={open} aria-controls="adm-side" onClick={() => setOpen(true)}>
+          <Icon name="menu" size={20} />
+        </button>
+        <Link href="/admin" className="adm-mbar-brand">Muddhugumma <small>Admin</small></Link>
+      </div>
+      {open && <div className="adm-scrim" onClick={() => setOpen(false)} aria-hidden="true" />}
+      <aside id="adm-side" className={`adm-side print:hidden${open ? " open" : ""}`}>
+        <button type="button" className="adm-side-close" aria-label="Close menu" onClick={() => setOpen(false)}>
+          <Icon name="x" size={18} />
+        </button>
+        {children}
+      </aside>
+    </>
   );
 }

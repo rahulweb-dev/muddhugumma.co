@@ -12,6 +12,9 @@ import { REGION_FLAG, REGION_NAME, getAdminScope, scopeFilter, scopeRegions } fr
 import { orderStatusLabel, paymentStatusLabel } from "@/lib/admin-labels";
 import { stockField, stockFor } from "@/lib/stock";
 import { forecastFor, salesVelocity } from "@/lib/stock-forecast";
+import { PRESETS, loadReport, resolveRange, type Range, type RegionReport } from "./reports/data";
+import { BarList, DonutChart, TrendChart, VIZ } from "@/components/admin/Charts";
+import { categoryLabel } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -146,6 +149,11 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
     sellingFast = prods.filter((p) => regions.some((r) => forecastFor(p.slug, r, stockFor(p, r), p.freeSize ? ["Free size"] : sizes, velocity).some((f) => f.days <= 14))).length;
   }
 
+  // Performance section: ?range=7|30|90|fy (default 30 days), compared with the same length of time just before.
+  const range = resolveRange({ range: first(sp.range) });
+  const prevRange: Range = { preset: "prev", from: "", to: "", label: "", start: new Date(range.start.getTime() - (range.end.getTime() - range.start.getTime())), end: range.start };
+  const [report, prev] = may("reports.view") ? await Promise.all([loadReport(range), loadReport(prevRange)]) : [null, null];
+
   const money = (r: Region, n: number) => formatMoney(Math.round(n * 100) / 100, r);
   const sum = (r: Region, buckets: string[]) => {
     const rows = sales.filter((s) => s._id.region === r && buckets.includes(s._id.bucket));
@@ -243,6 +251,113 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
             </table>
           </div>
           <p className="muted adm-small">Cancelled and returned orders are left out. Rupees and pounds are never added together.</p>
+        </section>
+      )}
+
+      {report && prev && (
+        <section className="dash-perf" aria-labelledby="perf-h">
+          <div className="dash-perf-head">
+            <h2 className="dash-h" id="perf-h">Performance · {range.label}</h2>
+            <nav className="dash-range" aria-label="Period">
+              {PRESETS.map((p) => (
+                <Link key={p.key} href={`/admin?range=${p.key}`} aria-current={range.preset === p.key ? "page" : undefined}>{p.label}</Link>
+              ))}
+            </nav>
+          </div>
+
+          {regions.map((r) => {
+            const now: RegionReport = report[r];
+            const was: RegionReport = prev[r];
+            const delta = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
+            const tiles = [
+              { label: "Revenue", value: money(r, now.revenue), change: delta(now.revenue, was.revenue) },
+              { label: "Orders", value: String(now.liveOrders), change: delta(now.liveOrders, was.liveOrders) },
+              { label: "Average order", value: money(r, now.aov), change: delta(now.aov, was.aov) },
+              { label: "Pieces sold", value: String(now.units), change: delta(now.units, was.units) },
+              { label: "Return requests", value: `${Math.round(now.returnRate * 100)}%`, change: null, note: `${now.returnRequests} of ${now.orders} orders` },
+            ];
+            return (
+              <div key={r} className="dash-kpis">
+                <span className="dash-kpis-store">{REGION_FLAG[r]} {REGION_NAME[r]}</span>
+                {tiles.map((t) => (
+                  <div key={t.label} className="dash-kpi">
+                    <span>{t.label}</span>
+                    <b>{t.value}</b>
+                    <small>
+                      {t.change === null ? (t.note ?? "No earlier period to compare") : <span className={t.change >= 0 ? "dash-up" : "dash-down"}>{t.change >= 0 ? "▲" : "▼"} {Math.abs(t.change)}% vs previous period</span>}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+
+          <div className={`dash-charts${regions.length > 1 ? " two" : ""}`}>
+            {regions.map((r) => (
+              <div key={r} className="adm-card">
+                <div className="adm-card-head">
+                  <h3 className="h3">Revenue per day · {REGION_FLAG[r]} {REGION_NAME[r]} ({r === "uk" ? "£" : "₹"})</h3>
+                </div>
+                <TrendChart points={report[r].daily.map((d) => ({ day: d.day, value: d.revenue }))} color={r === "uk" ? VIZ[1] : VIZ[0]} format={(n) => money(r, n)} label={`Revenue per day in ${REGION_NAME[r]}`} />
+              </div>
+            ))}
+          </div>
+
+          {(() => {
+            // Pieces and order counts add up across countries (money does not), so the share charts use those.
+            const cats = new Map<string, number>();
+            const best = new Map<string, { label: string; units: number }>();
+            let online = 0;
+            let cod = 0;
+            for (const r of regions) {
+              for (const c of report[r].categories) cats.set(c.key, (cats.get(c.key) ?? 0) + c.units);
+              for (const b of report[r].bestByUnits) best.set(b.key, { label: b.label, units: (best.get(b.key)?.units ?? 0) + b.units });
+              online += report[r].prepaid.orders;
+              cod += report[r].cod.orders;
+            }
+            const pcs = (n: number) => `${n} pc${n === 1 ? "" : "s"}`;
+            const ords = (n: number) => `${n} order${n === 1 ? "" : "s"}`;
+            const totalPieces = [...cats.values()].reduce((a, n) => a + n, 0);
+            return (
+              <div className="dash-charts three">
+                <div className="adm-card">
+                  <h3 className="h3">Pieces sold by category</h3>
+                  <DonutChart slices={[...cats.entries()].map(([k, v]) => ({ label: categoryLabel(k), value: v }))} format={pcs} center={String(totalPieces)} label="Pieces sold by category" />
+                </div>
+                <div className="adm-card">
+                  <h3 className="h3">How customers pay</h3>
+                  <DonutChart slices={[{ label: "Online (UPI, cards)", value: online }, { label: "Cash on delivery", value: cod }]} format={ords} center={String(online + cod)} label="Orders by payment type" />
+                </div>
+                <div className="adm-card">
+                  <div className="adm-card-head"><h3 className="h3">Best sellers</h3><Link className="adm-more" href={`/admin/reports?range=${range.preset}`}>Full report</Link></div>
+                  <BarList rows={[...best.values()].sort((a, b) => b.units - a.units).slice(0, 6).map((b) => ({ label: b.label, value: b.units }))} format={pcs} />
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="adm-card dash-dl" aria-labelledby="dl-h">
+            <div>
+              <h3 className="h3" id="dl-h">Download reports</h3>
+              <p className="muted adm-small">CSV files for Excel or Google Sheets · {range.label} · {scope === "all" ? "India & UK" : REGION_NAME[scope]}</p>
+            </div>
+            <div className="dash-dl-list">
+              {[
+                { type: "orders", label: "Orders", perm: "reports.view" as Permission },
+                { type: "daily", label: "Daily sales", perm: "reports.view" as Permission },
+                { type: "products", label: "Products sold", perm: "reports.view" as Permission },
+                { type: "stock", label: "Stock (today)", perm: "products.manage" as Permission },
+                { type: "customers", label: "Customers", perm: "customers.view" as Permission },
+              ]
+                .filter((d) => may(d.perm))
+                .map((d) => (
+                  <a key={d.type} className="dash-dl-btn" href={`/admin/reports/download?type=${d.type}&range=${range.preset}&region=${scope}`} download>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5" /><path d="M5 19h14" /></svg>
+                    {d.label}
+                  </a>
+                ))}
+            </div>
+          </div>
         </section>
       )}
 
@@ -408,8 +523,8 @@ function BarChart({ series }: { series: { key: string; in: number; uk: number }[
           return (
             <g key={s.key}>
               <title>{`${s.key}: ${s.in} India, ${s.uk} UK`}</title>
-              {s.in > 0 && <rect className="bar bar-in" x={x} y={T + ih - hIn} width={bw * 0.64} height={Math.max(hIn, 2)} />}
-              {s.uk > 0 && <rect className="bar bar-uk" x={x} y={T + ih - hIn - hUk} width={bw * 0.64} height={Math.max(hUk, 2)} />}
+              {s.in > 0 && <rect className="bar bar-in" fill={VIZ[0]} x={x} y={T + ih - hIn} width={bw * 0.64} height={Math.max(hIn, 2)} />}
+              {s.uk > 0 && <rect className="bar bar-uk" fill={VIZ[1]} x={x} y={T + ih - hIn - hUk} width={bw * 0.64} height={Math.max(hUk, 2)} />}
               {n > 0 && <text className="val" x={x + bw * 0.32} y={T + ih - hIn - hUk - 4} textAnchor="middle">{n}</text>}
               <text className="ax" x={x + bw * 0.32} y={H - B + 16} textAnchor="middle">{dd}</text>
               {(i === 0 || dd === 1) && <text className="ax mo" x={x + bw * 0.32} y={H - B + 29} textAnchor="middle">{MONTHS[(mm || 1) - 1]}</text>}
