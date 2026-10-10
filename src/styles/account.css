@@ -242,4 +242,15 @@
 .acx-wa:hover{color:#1F5A31; background:#DCEEE1}
 .acx-out{display:flex; justify-content:center}
 .acx-out button{height:44px; padding:0 18px; border:0; background:transparent; font-weight:700; font-size:13px; color:var(--muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer}
+
+/* Signed-in account pages: no shop header or footer, just a slim bar back to the shop. The mobile app bar stays. */
+body:has(.ac-area) :is(.ann, .head, .head-sub, .foot, nav[aria-label="More from the house"]){display:none}
+.ac-top{position:sticky; top:0; z-index:30; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; height:58px; padding:0 16px; background:color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--line)}
+.ac-top-back{justify-self:start; display:inline-flex; align-items:center; gap:6px; height:40px; font-size:13px; font-weight:700; letter-spacing:.06em}
+.ac-top-logo{display:flex; align-items:center; gap:8px}
+.ac-top-logo span{display:flex; flex-direction:column; line-height:1}
+.ac-top-logo small{font-family:var(--display); font-size:7.5px; letter-spacing:.36em; color:var(--muted)}
+.ac-top-logo strong{font-family:var(--script); font-weight:400; font-size:21px; color:var(--cocoa); margin-top:2px}
+.ac-top-bag{justify-self:end; position:relative; display:grid; place-items:center; width:40px; height:40px}
+@media (max-width:420px){ .ac-top-logo img{display:none} }
 }
