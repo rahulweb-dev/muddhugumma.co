@@ -6,6 +6,7 @@ import { categoryLabel } from "@/lib/types";
 import { first, qs } from "@/lib/admin-data";
 import { Bars, Split } from "@/components/admin/Bars";
 import { PRESETS, loadReport, resolveRange, type RegionReport } from "./data";
+import { getAdminScope } from "@/lib/admin-scope";
 
 export const metadata: Metadata = { title: "Reports" };
 
@@ -17,7 +18,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
   await requireAdmin("reports.view");
   const sp = await searchParams;
   const range = resolveRange({ range: first(sp.range), from: first(sp.from), to: first(sp.to) });
-  const region: Region = first(sp.region) === "uk" ? "uk" : "in";
+  // No ?region: start on the store picked in the top bar (India when both are shown).
+  const scope = await getAdminScope();
+  const region: Region = first(sp.region) === "uk" ? "uk" : first(sp.region) === "in" ? "in" : scope === "uk" ? "uk" : "in";
   const data = await loadReport(range);
   const r = data[region];
   const money = (n: number) => formatMoney(Math.round(n * 100) / 100, region);

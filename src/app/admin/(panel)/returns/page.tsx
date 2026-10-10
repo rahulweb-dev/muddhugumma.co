@@ -8,6 +8,7 @@ import { RETURN_STATUS_LABEL } from "@/lib/returns";
 import { formatMoney } from "@/lib/region";
 import { escapeRx, first, fmtDateTime, qs } from "@/lib/admin-data";
 import { returnTone } from "@/components/admin/content/shared";
+import { getAdminScope, scopeFilter } from "@/lib/admin-scope";
 
 export const metadata: Metadata = { title: "Returns" };
 
@@ -26,7 +27,8 @@ export default async function AdminReturns({ searchParams }: { searchParams: SP 
   const page = Math.max(1, Math.floor(Number(first(sp.page)) || 1));
 
   await db();
-  const filter: Record<string, unknown> = {};
+  // Follows the store picked in the top bar (India / UK / both).
+  const filter: Record<string, unknown> = { ...scopeFilter(await getAdminScope()) };
   if (status === "open") filter.status = { $in: OPEN };
   else if (status) filter.status = status;
   if (q) {

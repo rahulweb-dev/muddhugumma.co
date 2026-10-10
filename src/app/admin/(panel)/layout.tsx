@@ -5,6 +5,8 @@ import { ROLE_LABEL, isStaff } from "@/lib/permissions";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { Icon } from "@/components/Icon";
 import { adminLogout } from "@/lib/actions/auth";
+import { AdminTopBar } from "@/components/admin/AdminTopBar";
+import { getAdminScope } from "@/lib/admin-scope";
 import "@/styles/admin.css";
 
 export const metadata: Metadata = {
@@ -13,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const admin = await requireAdmin();
+  const [admin, scope] = await Promise.all([requireAdmin(), getAdminScope()]);
   const roleLabel = isStaff(admin.role) ? ROLE_LABEL[admin.role] : "";
   return (
     <div className="adm print:block print:bg-white">
@@ -36,7 +38,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </aside>
-      <main className="adm-main">{children}</main>
+      <main className="adm-main">
+        <AdminTopBar scope={scope} />
+        {children}
+      </main>
     </div>
   );
 }

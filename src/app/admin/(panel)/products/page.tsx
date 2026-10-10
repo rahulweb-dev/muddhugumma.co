@@ -13,6 +13,7 @@ import { escapeRx, first, lowStockExpr, qs } from "@/lib/admin-data";
 import { ActiveSwitch } from "@/components/admin/AdminControls";
 import { Icon } from "@/components/Icon";
 import { allCategories } from "@/lib/categories";
+import { getAdminScope } from "@/lib/admin-scope";
 
 export const metadata: Metadata = { title: "Products" };
 
@@ -20,6 +21,7 @@ type SP = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function AdminProducts({ searchParams }: { searchParams: SP }) {
   await requireAdmin("products.manage");
+  const scope = await getAdminScope(); // top-bar store: show only that country's stock column
   const sp = await searchParams;
   const q = first(sp.q).trim().slice(0, 80);
   const cat = first(sp.category);
@@ -87,17 +89,19 @@ export default async function AdminProducts({ searchParams }: { searchParams: SP
                 <th>Category</th>
                 <th className="num">Price ₹</th>
                 <th className="num">Price £</th>
-                {low ? <th>Low sizes</th> : <><th className="num">Stock IN</th><th className="num">Stock UK</th></>}
+                {low ? <th>Low sizes</th> : <>{scope !== "uk" && <th className="num">Stock 🇮🇳 India</th>}{scope !== "in" && <th className="num">Stock 🇬🇧 UK</th>}</>}
                 <th>Active</th>
                 <th aria-label="Edit" />
               </tr>
             </thead>
             <tbody>
               {products.map((p) => {
-                const byRegion = [
-                  ["IN", p.stock],
-                  ["UK", p.stockUk],
-                ] as const;
+                const byRegion = (
+                  [
+                    ["IN", p.stock],
+                    ["UK", p.stockUk],
+                  ] as const
+                ).filter(([r]) => scope === "all" || r.toLowerCase() === scope);
                 const total = (s: Record<string, number>) => Object.values(s).reduce((a, b) => a + (Number(b) || 0), 0);
                 const lowOf = (s: Record<string, number>) => Object.entries(s).filter(([, n]) => n <= t);
                 return (

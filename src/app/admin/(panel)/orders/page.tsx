@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { Order } from "@/lib/models";
 import { formatMoney } from "@/lib/region";
 import { ORDER_STATUS_LIST, escapeRx, first, fmtDateTime, qs, type LeanOrder } from "@/lib/admin-data";
+import { REGION_FLAG, getAdminScope } from "@/lib/admin-scope";
+import { PAYMENT_METHOD_LABEL, orderStatusLabel, paymentStatusLabel } from "@/lib/admin-labels";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -16,8 +18,10 @@ export default async function AdminOrders({ searchParams }: { searchParams: SP }
   const sp = await searchParams;
   const statusRaw = first(sp.status);
   const status = (ORDER_STATUS_LIST as readonly string[]).includes(statusRaw) ? statusRaw : "";
+  // No ?region: follow the store picked in the top bar. ?region=all shows both whatever the top bar says.
   const regionRaw = first(sp.region);
-  const region = regionRaw === "in" || regionRaw === "uk" ? regionRaw : "";
+  const scope = await getAdminScope();
+  const region = regionRaw === "in" || regionRaw === "uk" ? regionRaw : regionRaw === "all" ? "" : scope === "all" ? "" : scope;
   const q = first(sp.q).trim().slice(0, 80);
   const page = Math.max(1, Math.floor(Number(first(sp.page)) || 1));
 
@@ -33,10 +37,10 @@ export default async function AdminOrders({ searchParams }: { searchParams: SP }
   const [total, orders, counts] = await Promise.all([
     Order.countDocuments(filter),
     Order.find(filter).sort({ createdAt: -1 }).skip((page - 1) * PER_PAGE).limit(PER_PAGE).lean<LeanOrder[]>(),
-    Order.aggregate<{ _id: string; n: number }>([{ $group: { _id: "$status", n: { $sum: 1 } } }]),
+    Order.aggregate<{ _id: string; n: number }>([...(region ? [{ $match: { region } }] : []), { $group: { _id: "$status", n: { $sum: 1 } } }]),
   ]);
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
-  const base = { status, region, q };
+  const base = { status, region: region || (scope !== "all" ? "all" : ""), q };
   const countOf = (s: string) => counts.find((c) => c._id === s)?.n ?? 0;
   const all = counts.reduce((a, c) => a + c.n, 0);
 
@@ -44,8 +48,8 @@ export default async function AdminOrders({ searchParams }: { searchParams: SP }
     <div className="adm-page">
       <header className="adm-head">
         <div>
-          <p className="kick">Fulfilment</p>
-          <h1 className="adm-title">Orders <span className="muted">({total})</span></h1>
+          <p className="kick">Orders · {region ? `${REGION_FLAG[region]} ${region === "uk" ? "UK" : "India"}` : "India & UK"}</p>
+          <h1 className="adm-title">All orders <span className="muted">({total})</span></h1>
         </div>
       </header>
 
@@ -53,7 +57,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: SP }
         <Link href={`/admin/orders${qs(base, { status: undefined, page: undefined })}`} aria-current={!status ? "page" : undefined}>All <span>{all}</span></Link>
         {ORDER_STATUS_LIST.map((s) => (
           <Link key={s} href={`/admin/orders${qs(base, { status: s, page: undefined })}`} aria-current={status === s ? "page" : undefined}>
-            {s} <span>{countOf(s)}</span>
+            {orderStatusLabel(s)} <span>{countOf(s)}</span>
           </Link>
         ))}
       </nav>
@@ -66,14 +70,14 @@ export default async function AdminOrders({ searchParams }: { searchParams: SP }
         </div>
         <div className="field">
           <label htmlFor="region">Region</label>
-          <select id="region" name="region" defaultValue={region}>
-            <option value="">India and UK</option>
+          <select id="region" name="region" defaultValue={region || "all"}>
+            <option value="all">India and UK</option>
             <option value="in">India (₹)</option>
             <option value="uk">UK (£)</option>
           </select>
         </div>
         <button className="btn ghost adm-btn">Apply</button>
-        {(q || region || status) && <Link className="adm-more" href="/admin/orders">Clear</Link>}
+        {(q || status || first(sp.region)) && <Link className="adm-more" href="/admin/orders">Clear</Link>}
       </form>
 
       {orders.length ? (
@@ -86,13 +90,13 @@ export default async function AdminOrders({ searchParams }: { searchParams: SP }
               <tbody>
                 {orders.map((o) => (
                   <tr key={String(o._id)}>
-                    <td><Link className="adm-a" href={`/admin/orders/${o._id}`}>{o.number}</Link></td>
+                    <td><Link className="adm-a" href={`/admin/orders/${o._id}`}>{REGION_FLAG[o.region === "uk" ? "uk" : "in"]} {o.number}</Link></td>
                     <td className="nowrap">{fmtDateTime(o.createdAt)}</td>
                     <td>{o.address?.name || "—"}<br /><small className="muted">{o.email}</small></td>
                     <td>{[o.address?.city, o.region === "uk" ? "UK" : "India"].filter(Boolean).join(", ")}</td>
                     <td className="num">{o.items?.reduce((a, i) => a + (i.qty ?? 0), 0) ?? 0}</td>
-                    <td className="nowrap"><span className={`status ${o.payment?.status ?? "pending"}`}>{o.payment?.status ?? "pending"}</span><br /><small className="muted">{o.payment?.method === "cod" ? "Cash on delivery" : o.payment?.method}</small></td>
-                    <td><span className={`status ${o.status}`}>{o.status}</span></td>
+                    <td className="nowrap"><span className={`status ${o.payment?.status ?? "pending"}`}>{paymentStatusLabel(o.payment?.status)}</span><br /><small className="muted">{PAYMENT_METHOD_LABEL[o.payment?.method ?? ""] ?? o.payment?.method}</small></td>
+                    <td><span className={`status ${o.status}`}>{orderStatusLabel(o.status)}</span></td>
                     <td className="num nowrap">{formatMoney(o.total ?? 0, o.region)}</td>
                   </tr>
                 ))}

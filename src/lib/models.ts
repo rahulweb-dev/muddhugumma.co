@@ -315,6 +315,25 @@ const ReturnSchema = schema(
   { timestamps: true }
 );
 
+/* ---------- Stock history: every manual change from Admin → Stock (who, why, before and after) ---------- */
+const StockLogSchema = schema(
+  {
+    productId: { type: String, index: true },
+    slug: String,
+    name: String,
+    region: { type: String, enum: ["in", "uk"] },
+    size: String,
+    from: Number,
+    to: Number,
+    reason: { type: String, enum: ["restock", "sold_offline", "damaged", "correction", "transfer"] },
+    note: { type: String, default: "" },
+    byId: String,
+    byName: String,
+  },
+  { timestamps: true }
+);
+StockLogSchema.index({ createdAt: -1 });
+
 /* ---------- Back-in-stock alerts ---------- */
 const StockAlertSchema = schema({ productSlug: { type: String, index: true }, size: String, email: String, region: String, notifiedAt: Date }, { timestamps: true });
 StockAlertSchema.index({ productSlug: 1, size: 1, email: 1 }, { unique: true });
@@ -521,6 +540,8 @@ export type ReturnDoc = Stamps & {
   status: ReturnStatus; refundAmount: number; refundMethod: "original" | "store_credit" | "bank";
   pickup?: { courier?: string; awb?: string; date?: Date }; comments?: string; history: { status: string; at: Date; note?: string }[];
 };
+export type StockReason = "restock" | "sold_offline" | "damaged" | "correction" | "transfer";
+export type StockLogDoc = Stamps & { productId: string; slug: string; name: string; region: RegionKey; size: string; from: number; to: number; reason: StockReason; note?: string; byId?: string; byName?: string };
 export type StockAlertDoc = Stamps & { productSlug: string; size: string; email: string; region: string; notifiedAt?: Date };
 export type GiftCardDoc = Stamps & {
   code: string; region: RegionKey; initial: number; balance: number; purchaserEmail?: string; recipientName?: string; recipientEmail?: string;
@@ -556,6 +577,7 @@ export const PasswordReset: Model<PasswordResetDoc> = m.PasswordReset ?? mongoos
 export const LoginAttempt: Model<LoginAttemptDoc> = m.LoginAttempt ?? mongoose.model<LoginAttemptDoc>("LoginAttempt", LoginAttemptSchema);
 export const Otp: Model<OtpDoc> = m.Otp ?? mongoose.model<OtpDoc>("Otp", OtpSchema);
 export const ReturnRequest: Model<ReturnDoc> = m.ReturnRequest ?? mongoose.model<ReturnDoc>("ReturnRequest", ReturnSchema);
+export const StockLog: Model<StockLogDoc> = m.StockLog ?? mongoose.model<StockLogDoc>("StockLog", StockLogSchema);
 export const StockAlert: Model<StockAlertDoc> = m.StockAlert ?? mongoose.model<StockAlertDoc>("StockAlert", StockAlertSchema);
 export const GiftCard: Model<GiftCardDoc> = m.GiftCard ?? mongoose.model<GiftCardDoc>("GiftCard", GiftCardSchema);
 export const LoyaltyTxn: Model<LoyaltyTxnDoc> = m.LoyaltyTxn ?? mongoose.model<LoyaltyTxnDoc>("LoyaltyTxn", LoyaltyTxnSchema);

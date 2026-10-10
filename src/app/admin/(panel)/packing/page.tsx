@@ -6,6 +6,7 @@ import { Order, Product } from "@/lib/models";
 import { formatMoney } from "@/lib/region";
 import { codToCollect, fmtDateTime, isStitchingItem, startOfToday, type LeanOrder } from "@/lib/admin-data";
 import { PackingQueue, type PackingRow } from "@/components/admin/PackingQueue";
+import { getAdminScope, scopeFilter } from "@/lib/admin-scope";
 
 export const metadata: Metadata = { title: "Packing" };
 
@@ -14,7 +15,8 @@ const DAY = 86_400_000;
 export default async function PackingPage() {
   await requireAdmin("orders.ship");
   await db();
-  const orders = await Order.find({ status: { $in: ["confirmed", "packed"] } })
+  // The India team packs India orders and the UK team UK orders: follows the store picked in the top bar.
+  const orders = await Order.find({ ...scopeFilter(await getAdminScope()), status: { $in: ["confirmed", "packed"] } })
     .sort({ createdAt: 1 })
     .limit(300)
     .lean<LeanOrder[]>();
