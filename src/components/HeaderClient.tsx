@@ -215,7 +215,7 @@ export function SearchBox({ variant }: { variant: "desktop" | "mobile" }) {
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKey}
-        placeholder="Search the store…"
+        placeholder={variant === "mobile" ? "Search sarees, half sarees…" : "Search the store…"}
         autoComplete="off"
         role="combobox"
         aria-autocomplete="list"
