@@ -33,7 +33,7 @@ const Mark = ({ m }: { m: Method }) => {
  * (which reaches Instagram, Telegram, Messages…). Links carry utm tags so Analytics shows which channel brings visits,
  * and ?region=uk when shared from the UK store so the price matches.
  */
-export function ShareButton({ slug, name, price, image }: { slug: string; name: string; price: string; image?: string }) {
+export function ShareButton({ slug, name, price, image, compact = false }: { slug: string; name: string; price: string; image?: string; compact?: boolean }) {
   const { region, toast } = useStore();
   const [open, setOpen] = useState(false);
   const [canNative, setCanNative] = useState(false);
@@ -123,12 +123,19 @@ export function ShareButton({ slug, name, price, image }: { slug: string; name: 
   ];
 
   return (
-    <div className="share" ref={box}>
-      <button type="button" className="share-btn" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((o) => !o)}>
-        <Mark m="native" /> Share
-      </button>
+    <div className={`share${compact ? " compact" : ""}`} ref={box}>
+      {compact ? (
+        // On product cards: phones go straight to their share sheet; computers get the menu as a bottom panel.
+        <button type="button" className="share-ic-btn" aria-label={`Share ${name}`} aria-expanded={open} onClick={() => (canNative ? go("native") : setOpen((o) => !o))}>
+          <Mark m="native" />
+        </button>
+      ) : (
+        <button type="button" className="share-btn" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((o) => !o)}>
+          <Mark m="native" /> Share
+        </button>
+      )}
       {open && (
-        <div className="share-menu" role="menu" aria-label={`Share ${name}`}>
+        <div className={`share-menu${compact ? " sheet" : ""}`} role="menu" aria-label={`Share ${name}`}>
           {canNative && (
             <button type="button" role="menuitem" className="share-native" onClick={() => go("native")}>
               <Mark m="native" /> Share via…

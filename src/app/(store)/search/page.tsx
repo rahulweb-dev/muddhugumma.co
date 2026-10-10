@@ -74,7 +74,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
             <div><span className="kick">Most loved</span><h2 className="h2">Bestsellers <i>this week</i></h2></div>
             <Link className="link" href="/c/all">Shop all</Link>
           </div>
-          <div className="pgrid">{best.map((p) => <ProductCard key={p.slug} p={p} bag />)}</div>
+          <div className="pgrid">{best.map((p) => <ProductCard key={p.slug} p={p} />)}</div>
         </section>
       </div>
     );

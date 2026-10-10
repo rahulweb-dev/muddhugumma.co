@@ -88,7 +88,7 @@ export function ListingGrid({
   return (
     <>
       <div className="pgrid plp-grid">
-        {items.map((p, i) => <ProductCard key={p.slug} p={p} priority={i < 3} bag />)}
+        {items.map((p, i) => <ProductCard key={p.slug} p={p} priority={i < 3} />)}
       </div>
       <nav className="plp-more" aria-label="Pagination">
         <p aria-live="polite">Showing {from}–{to} of {total}</p>
