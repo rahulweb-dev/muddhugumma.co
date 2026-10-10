@@ -8,7 +8,7 @@
   .plp-head{margin-top:14px; display:grid; grid-template-columns:1fr; background:var(--stone); position:relative}
   .plp-head::after{content:""; position:absolute; inset:8px; border:1px solid var(--stone-2); pointer-events:none}
   .plp-ban{aspect-ratio:16/7}
-  .plp-ban img{object-position:50% 30%}
+  .plp-ban img{object-position:50% 0%} /* keep faces in the wide banner crop: anchor to the top, centred */
   .plp-copy{padding:20px 18px 24px; display:flex; flex-direction:column; gap:8px; position:relative; z-index:1}
   .plp-copy p{margin:0; color:var(--muted); max-width:52ch; font-size:14.5px}
   .plp-count{font-family:var(--serif); font-style:italic; font-size:18px; color:var(--bronze)}
