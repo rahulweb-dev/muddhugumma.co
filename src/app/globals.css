@@ -285,11 +285,16 @@
   .legal{grid-column:1/-1; border-top:1px solid #34322E; padding-top:16px; font-size:11.5px; color:#8A847A; display:flex; flex-wrap:wrap; gap:6px 18px; justify-content:space-between}
   .legal nav{display:flex; flex-wrap:wrap; gap:6px 14px}
   @media (min-width:720px){ .foot{grid-template-columns:1.6fr repeat(3,1fr); padding-block:56px 30px} .foot .fb{grid-column:auto} }
-  .appbar{position:fixed; left:0; right:0; bottom:0; z-index:45; display:grid; grid-template-columns:repeat(5,1fr); background:rgba(251,250,247,.97); backdrop-filter:blur(10px); border-top:1px solid var(--line); padding:8px 4px calc(8px + env(safe-area-inset-bottom,0px))}
-  .appbar a{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; font-weight:600; color:var(--muted); position:relative}
-  .appbar a[aria-current="page"]{color:var(--ink)}
-  .appbar a[aria-current="page"]::before{content:""; width:4px; height:4px; border-radius:50%; background:var(--bronze); position:absolute; top:-5px}
-  .appbar-space{height:64px}
+  /* Mobile bottom bar: a dark dock floating above the page. Bars that sit on top of it use bottom: calc(82px + safe area). */
+  .appbar{position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom,0px)); z-index:45; display:grid; grid-template-columns:repeat(5,1fr); align-items:center; height:62px; padding:0 6px; border-radius:22px; background:var(--ink); box-shadow:0 18px 30px -12px rgba(27,26,24,.55)}
+  .appbar a{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; height:100%; font-size:10.5px; font-weight:600; color:#A9A296; position:relative; -webkit-tap-highlight-color:transparent}
+  .appbar a svg{width:21px; height:21px; color:#CFC8BC; transition:transform .2s}
+  .appbar a:active svg{transform:scale(.9)}
+  .appbar a[aria-current="page"]{color:#E9C98F; font-weight:800}
+  .appbar a[aria-current="page"] svg{color:#E9C98F; fill:rgba(233,201,143,.2)}
+  .appbar .badge-n em{background:#E9C98F; color:var(--ink)}
+  .appbar a:focus-visible{outline:2px solid #E9C98F; outline-offset:-4px; border-radius:14px}
+  .appbar-space{height:86px}
   @media (min-width:720px){ .appbar,.appbar-space{display:none} }
   
   /* ---------- overlays, toast, forms, breadcrumbs ---------- */
@@ -311,7 +316,7 @@
   .drawer-links{list-style:none; margin:0; padding:0}
   .drawer-links a{display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid var(--line); font-size:13px; font-weight:600; letter-spacing:.12em; text-transform:uppercase}
   .drawer-links a.sale{color:var(--sale)}
-  .toast{position:fixed; z-index:90; left:50%; bottom:84px; transform:translate(-50%,20px); opacity:0; background:var(--ink); color:var(--paper); padding:12px 16px; display:flex; gap:12px; align-items:center; font-size:13px; transition:.35s; pointer-events:none; width:max-content; max-width:calc(100% - 32px)}
+  .toast{position:fixed; z-index:90; left:50%; bottom:calc(86px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,20px); opacity:0; background:var(--ink); color:var(--paper); padding:12px 16px; display:flex; gap:12px; align-items:center; font-size:13px; transition:.35s; pointer-events:none; width:max-content; max-width:calc(100% - 32px)}
   @media (min-width:720px){ .toast{bottom:28px} }
   .toast.show{opacity:1; transform:translate(-50%,0); pointer-events:auto}
   .toast img{width:38px; height:50px; object-fit:cover}

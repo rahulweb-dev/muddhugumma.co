@@ -108,7 +108,7 @@ function CompareTray() {
       {/* phones: compact pill above the app bar */}
       <Link
         href="/compare"
-        className="md:hidden fixed z-46 left-4 bottom-[calc(124px+env(safe-area-inset-bottom,0px))] flex items-center gap-2 bg-ink text-white rounded-full pl-2 pr-4 h-11 shadow-[0_10px_30px_-10px_rgba(27,26,24,.6)] text-[11px] font-bold tracking-[.14em] uppercase"
+        className="md:hidden fixed z-46 left-4 bottom-[calc(140px+env(safe-area-inset-bottom,0px))] flex items-center gap-2 bg-ink text-white rounded-full pl-2 pr-4 h-11 shadow-[0_10px_30px_-10px_rgba(27,26,24,.6)] text-[11px] font-bold tracking-[.14em] uppercase"
         aria-label={`Compare ${n} selected piece${n > 1 ? "s" : ""}`}
       >
         <span className="flex -space-x-2">

@@ -12,20 +12,20 @@ const ITEMS: { label: string; href: string; icon: IconName; match: (p: string) =
   { label: "Account", href: "/account", icon: "user", match: (p) => p.startsWith("/account") },
 ];
 
-/** Mobile bottom bar, hidden on product pages where the add-to-bag bar takes its place. */
+/** Mobile bottom bar (floating dark dock), hidden on product pages where the add-to-bag bar takes its place. */
 export function AppBar() {
   const pathname = usePathname();
-  const { cartCount } = useStore();
+  const { cartCount, wishlist } = useStore();
   if (pathname.startsWith("/p/") || pathname.startsWith("/admin") || pathname.startsWith("/checkout")) return null;
   return (
     <nav className="appbar" aria-label="Quick links">
       {ITEMS.map((it) => {
-        const count = it.label === "Bag" ? cartCount : 0;
+        const count = it.label === "Bag" ? cartCount : it.label === "Wishlist" ? wishlist.length : 0;
         return (
           <Link key={it.href} href={it.href} aria-current={it.match(pathname) ? "page" : undefined}>
             <span className="badge-n" aria-hidden="true">
               <Icon name={it.icon} />
-              {it.label === "Bag" && <em hidden={!cartCount}>{cartCount}</em>}
+              {(it.label === "Bag" || it.label === "Wishlist") && <em hidden={!count}>{count > 99 ? "99+" : count}</em>}
             </span>
             {it.label}
             {count > 0 && <span className="sr-only">, {count} {count === 1 ? "item" : "items"}</span>}

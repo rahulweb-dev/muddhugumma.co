@@ -92,7 +92,7 @@ export function Assistant({ whatsapp, region }: { whatsapp: string; region: "in"
   const onPdp = pathname.startsWith("/p/");
   const waHref = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent("Hi House of Muddhugumma, I have a question: ")}` : "";
   // Phones: sit above the app bar (or the product page's add-to-bag bar). Desktop: bottom-right corner.
-  const lift = onPdp ? "bottom-[calc(96px+env(safe-area-inset-bottom,0px))]" : "bottom-[calc(76px+env(safe-area-inset-bottom,0px))]";
+  const lift = onPdp ? "bottom-[calc(96px+env(safe-area-inset-bottom,0px))]" : "bottom-[calc(88px+env(safe-area-inset-bottom,0px))]";
 
   const actionEl = (a: BotAction, i: number) =>
     a.href ? (

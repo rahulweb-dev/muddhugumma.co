@@ -200,7 +200,7 @@
   .popular .chip[aria-current="true"]{background:var(--ink); color:var(--on); border-color:var(--ink)}
   
   /* ---------- mobile sort / filter bar ---------- */
-  .plp-mbar{position:fixed; z-index:44; left:0; right:0; bottom:calc(55px + env(safe-area-inset-bottom,0px)); display:grid; grid-template-columns:1fr 1fr; background:rgba(251,250,247,.98); backdrop-filter:blur(10px); border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
+  .plp-mbar{position:fixed; z-index:44; left:0; right:0; bottom:calc(82px + env(safe-area-inset-bottom,0px)); display:grid; grid-template-columns:1fr 1fr; background:rgba(251,250,247,.98); backdrop-filter:blur(10px); border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
   .plp-mbar button{display:flex; align-items:center; justify-content:center; gap:10px; padding:9px 8px; text-align:left; min-width:0}
   .plp-mbar button + button{border-left:1px solid var(--line)}
   .plp-mbar span{display:flex; flex-direction:column; font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; line-height:1.25; min-width:0}

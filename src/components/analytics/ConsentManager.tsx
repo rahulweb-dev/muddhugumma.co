@@ -66,7 +66,7 @@ export function ConsentManager({ initial }: { initial: Consent | null }) {
           tabIndex={-1}
           role="region"
           aria-labelledby={`${ids}-h`}
-          className="fixed inset-x-2 bottom-[calc(72px+env(safe-area-inset-bottom,0px))] z-[70] mx-auto max-h-[calc(100dvh-96px)] max-w-[560px] overflow-y-auto border border-line bg-paper p-4 text-[13px] leading-normal md:p-5 md:text-[13.5px] md:leading-relaxed text-ink shadow-[0_20px_50px_-20px_rgba(27,26,24,.45)] outline-none focus-visible:outline-2 focus-visible:outline-bronze md:inset-x-auto md:bottom-5 md:left-5 md:mx-0"
+          className="fixed inset-x-2 bottom-[calc(86px+env(safe-area-inset-bottom,0px))] z-[70] mx-auto max-h-[calc(100dvh-96px)] max-w-[560px] overflow-y-auto border border-line bg-paper p-4 text-[13px] leading-normal md:p-5 md:text-[13.5px] md:leading-relaxed text-ink shadow-[0_20px_50px_-20px_rgba(27,26,24,.45)] outline-none focus-visible:outline-2 focus-visible:outline-bronze md:inset-x-auto md:bottom-5 md:left-5 md:mx-0"
         >
           <h2 id={`${ids}-h`} className="h3 mb-1.5">Cookies, with your permission</h2>
           <p className="m-0 text-muted">

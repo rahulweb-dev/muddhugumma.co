@@ -120,7 +120,7 @@
   .co-mbar small{font-size:11px; color:var(--ok); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .co-mbar .btn{height:44px; padding:0 18px; flex:none; max-width:62%; overflow:hidden; text-overflow:ellipsis}
   /* the bag keeps the app bar; sit just above it */
-  .co-mbar.co-mbar-app{bottom:calc(55px + env(safe-area-inset-bottom,0px)); padding-bottom:10px}
+  .co-mbar.co-mbar-app{bottom:calc(82px + env(safe-area-inset-bottom,0px)); padding-bottom:10px}
   .co-page:has(.co-mbar-app){padding-bottom:176px}
   .co-desk-cta{display:none}
   @media (min-width:900px){
