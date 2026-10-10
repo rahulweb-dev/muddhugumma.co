@@ -5,6 +5,7 @@ import { Product, StockAlert, type ProductDoc } from "@/lib/models";
 import { getRegion } from "@/lib/queries";
 import { canonicalSize } from "@/lib/region";
 import { stockFor } from "@/lib/stock";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 export type AlertState = { ok: boolean; message: string } | null;
 
@@ -16,6 +17,7 @@ const AlertInput = z.object({
 
 /** "Notify me": records a back-in-stock alert for a sold-out size. The back-in-stock job emails the shopper. */
 export async function requestStockAlert(_: AlertState, form: FormData): Promise<AlertState> {
+  if (!(await allow("stock-alert", 20, 3600))) return { ok: false, message: TOO_MANY };
   const parsed = AlertInput.safeParse({ slug: form.get("slug"), size: form.get("size"), email: form.get("email") });
   if (!parsed.success) return { ok: false, message: parsed.error.issues.find((i) => i.path[0] === "email")?.message ?? "Please check your details and try again." };
   const { slug, email } = parsed.data;

@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Product, Review, type ProductDoc } from "@/lib/models";
 import { reviewEligibility } from "@/lib/reviews";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 export type ReviewState = { ok: boolean; message: string; errors?: Partial<Record<"rating" | "title" | "body" | "city" | "images", string>> } | null;
 
@@ -22,6 +23,7 @@ const ReviewInput = z.object({
 export async function submitReview(_: ReviewState, form: FormData): Promise<ReviewState> {
   const session = await getSession();
   if (!session) return { ok: false, message: "Please sign in to write a review." };
+  if (!(await allow("review", 10, 3600, session.uid))) return { ok: false, message: TOO_MANY };
 
   const parsed = ReviewInput.safeParse({
     slug: form.get("slug"),

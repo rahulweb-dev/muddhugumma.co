@@ -86,6 +86,7 @@ const UserSchema = schema(
   },
   { timestamps: true }
 );
+UserSchema.index({ role: 1, createdAt: -1 }); // staff list and customer list
 
 /* ---------- Order ---------- */
 const OrderItemSchema = schema(
@@ -181,6 +182,11 @@ const OrderSchema = schema(
   { timestamps: true }
 );
 OrderSchema.index({ "shipment.awb": 1 }, { sparse: true });
+// Admin lists, dashboard figures, reports, customer profiles and review checks (keep queries fast as orders grow).
+OrderSchema.index({ createdAt: -1 });
+OrderSchema.index({ region: 1, status: 1, createdAt: -1 });
+OrderSchema.index({ email: 1, createdAt: -1 });
+OrderSchema.index({ "items.slug": 1 });
 
 /* ---------- Coupon ---------- */
 const CouponSchema = schema(
@@ -260,6 +266,10 @@ const SettingsSchema = schema(
 );
 
 /* ---------- Messages sent (or logged in test mode) ---------- */
+/* ---------- Rate limits: counters per action + visitor, removed automatically when their window ends ---------- */
+const RateLimitSchema = schema({ key: { type: String, required: true, unique: true }, count: { type: Number, default: 0 }, resetAt: { type: Date, required: true } });
+RateLimitSchema.index({ resetAt: 1 }, { expireAfterSeconds: 0 });
+
 const OutboxSchema = schema(
   {
     channel: { type: String, enum: ["email", "whatsapp", "sms"], required: true, index: true },
@@ -315,6 +325,7 @@ const ReturnSchema = schema(
   },
   { timestamps: true }
 );
+ReturnSchema.index({ region: 1, status: 1, createdAt: -1 });
 
 /* ---------- Stock history: every manual change from Admin → Stock (who, why, before and after) ---------- */
 const StockLogSchema = schema(
@@ -335,6 +346,7 @@ const StockLogSchema = schema(
   { timestamps: true }
 );
 StockLogSchema.index({ createdAt: -1 });
+StockLogSchema.index({ region: 1, createdAt: -1 });
 
 /* ---------- Back-in-stock alerts ---------- */
 const StockAlertSchema = schema({ productSlug: { type: String, index: true }, size: String, email: String, region: String, notifiedAt: Date }, { timestamps: true });
@@ -573,6 +585,8 @@ export const Coupon: Model<CouponDoc> = m.Coupon ?? mongoose.model<CouponDoc>("C
 export const Review: Model<ReviewDoc> = m.Review ?? mongoose.model<ReviewDoc>("Review", ReviewSchema);
 export const Subscriber: Model<SubscriberDoc> = m.Subscriber ?? mongoose.model<SubscriberDoc>("Subscriber", SubscriberSchema);
 export const Settings: Model<SettingsDoc> = m.Settings ?? mongoose.model<SettingsDoc>("Settings", SettingsSchema);
+export type RateLimitDoc = { key: string; count: number; resetAt: Date };
+export const RateLimit: Model<RateLimitDoc> = m.RateLimit ?? mongoose.model<RateLimitDoc>("RateLimit", RateLimitSchema);
 export const Outbox: Model<OutboxDoc> = m.Outbox ?? mongoose.model<OutboxDoc>("Outbox", OutboxSchema);
 export const Activity: Model<ActivityDoc> = m.Activity ?? mongoose.model<ActivityDoc>("Activity", ActivitySchema);
 export const PasswordReset: Model<PasswordResetDoc> = m.PasswordReset ?? mongoose.model<PasswordResetDoc>("PasswordReset", PasswordResetSchema);

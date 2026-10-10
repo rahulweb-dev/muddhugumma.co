@@ -10,6 +10,11 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  // Safe part of a Content-Security-Policy: no framing by other sites, no injected <base>, no plugins, https only.
+  // Script / connect sources stay open on purpose (analytics, Cashfree, Stripe); see the note above.
+  { key: "Content-Security-Policy", value: `frame-ancestors 'self'; base-uri 'self'; object-src 'none'${isProd ? "; upgrade-insecure-requests" : ""}` },
+  // Payment popups (Cashfree) need to talk back to this window.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
   // HTTPS only in production (localhost is plain http). Two years, the HSTS preload list minimum.
   ...(isProd ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }] : []),
 ];

@@ -15,6 +15,7 @@ import { attachReferral } from "@/lib/referral";
 import { sendEmail } from "@/lib/notify";
 import { siteUrl } from "@/lib/email-layout";
 import { passwordReset as passwordResetEmail } from "@/lib/messages/account";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 export type ActionState = {
   ok: boolean;
@@ -151,6 +152,7 @@ const RegisterSchema = z.object({
 });
 
 export async function register(_prev: ActionState | undefined, form: FormData): Promise<ActionState> {
+  if (!(await allow("register", 10, 3600))) return { ok: false, message: TOO_MANY };
   const values = {
     name: str(form, "name"),
     email: str(form, "email"),
@@ -320,6 +322,7 @@ const FORGOT_OK = "If there's an account with that email, we've sent a link to r
 
 /** Always answers the same way, so the form can't be used to find out which emails have accounts. */
 export async function requestPasswordReset(_prev: ActionState | undefined, form: FormData): Promise<ActionState> {
+  if (!(await allow("reset", 5, 3600))) return { ok: false, message: TOO_MANY };
   const values = { email: str(form, "email") };
   const parsed = z.object({ email }).safeParse(values);
   if (!parsed.success) return { ok: false, errors: issuesToErrors(parsed.error), values };

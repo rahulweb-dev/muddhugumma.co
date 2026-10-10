@@ -10,6 +10,7 @@ import { formatMoney, type Region } from "@/lib/region";
 import { activatePurchasedGiftCard, createPendingGiftCard, giftCardBalance } from "@/lib/giftcards";
 import { createStripeCheckoutSession, stripeConfigured } from "@/lib/payments";
 import { cashfreeConfigured, createCashfreeOrder, settleCashfree, type CashfreeCheckout } from "@/lib/cashfree";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 /* Buying a gift card online. Same payment paths as orders: Cashfree (India), Stripe (UK), test mode without keys. */
 
@@ -52,6 +53,7 @@ async function rememberPurchase(ref: string) {
 }
 
 export async function purchaseGiftCard(input: GiftCardPurchaseInput): Promise<GiftCardPurchaseResult> {
+  if (!(await allow("giftcard", 10, 3600))) return { ok: false, error: TOO_MANY };
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
     const fe: Record<string, string> = {};

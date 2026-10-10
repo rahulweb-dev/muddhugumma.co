@@ -29,6 +29,7 @@ import { reverseLoyaltyForOrder, spendPoints, unspendPoints } from "@/lib/loyalt
 import { hasVerifiedOtp, otpDeliverable } from "@/lib/otp";
 import { onOrderPaid, onOrderPlaced } from "@/lib/order-events";
 import { logStockMoves } from "@/lib/stock-log";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 /* ---------- coupons ---------- */
 
@@ -248,6 +249,7 @@ const METHOD_NOTE: Record<string, string> = {
 };
 
 export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
+  if (!(await allow("checkout", 20, 3600))) return { ok: false, error: TOO_MANY };
   const parsed = orderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Please check the highlighted details.", fieldErrors: issuesToFields(parsed.error.issues) };
   const data = parsed.data;

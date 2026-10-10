@@ -1,6 +1,7 @@
 "use server";
 import { sendOtp, verifyOtp } from "@/lib/otp";
 import { isRegion } from "@/lib/region";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 /* Phone verification for cash on delivery (the checkout asks for it when settings.codOtpRequired is on). */
 
@@ -13,6 +14,7 @@ const valid = (p: string, region: "in" | "uk") => (region === "in" ? /^[6-9]\d{9
 
 export async function requestCodOtp(phone: string, region: string): Promise<{ ok: true; retryAfter: number; testCode?: string; sentTo: string } | { ok: false; error: string; retryAfter?: number }> {
   if (!isRegion(region)) return { ok: false, error: "Unknown region." };
+  if (!(await allow("otp", 8, 3600))) return { ok: false, error: TOO_MANY };
   const p = local(phone, region);
   if (!valid(p, region)) return { ok: false, error: region === "in" ? "Enter a 10-digit mobile number first." : "Enter a valid UK phone number first." };
   try {
@@ -27,6 +29,7 @@ export async function requestCodOtp(phone: string, region: string): Promise<{ ok
 
 export async function confirmCodOtp(phone: string, region: string, code: string): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!isRegion(region)) return { ok: false, error: "Unknown region." };
+  if (!(await allow("otp", 8, 3600))) return { ok: false, error: TOO_MANY };
   const p = local(phone, region);
   if (!valid(p, region)) return { ok: false, error: "Enter a valid mobile number." };
   try {

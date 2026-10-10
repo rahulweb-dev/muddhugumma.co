@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { JOBS } from "@/lib/jobs";
+import { timingSafeEqual } from "node:crypto";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -9,7 +10,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ job: str
   const { job } = await params;
   const secret = process.env.CRON_SECRET;
   const auth = req.headers.get("authorization");
-  if (!secret || auth !== `Bearer ${secret}`) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  const want = Buffer.from(`Bearer ${secret ?? ""}`);
+  const got = Buffer.from(auth ?? "");
+  if (!secret || got.length !== want.length || !timingSafeEqual(got, want)) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   const entry = JOBS[job];
   if (!entry) return NextResponse.json({ error: "Unknown job" }, { status: 404 });
   const started = Date.now();

@@ -10,6 +10,7 @@ import { Order } from "@/lib/models";
 import { COURIERS, TRACKING_CODES, type TrackingCode } from "@/lib/shipping";
 import { codToCollect, type LeanOrder } from "@/lib/admin-data";
 import { bookShipment, shiprocketConfigured } from "@/lib/shiprocket";
+import { allow } from "@/lib/rate-limit";
 import { findTrackableOrder, recordShipment, recordTrackingEvent, removeTrackingEvent, type PublicTracking, type TrackingResult } from "@/lib/tracking";
 
 const ADMIN_TZ = process.env.ADMIN_TIMEZONE || "Asia/Kolkata";
@@ -141,6 +142,8 @@ export type TrackLookupState = { status: "idle" } | { status: "notfound"; number
 export async function lookupTracking(_prev: TrackLookupState, form: FormData): Promise<TrackLookupState> {
   const number = String(form.get("number") ?? "").slice(0, 40);
   const contact = String(form.get("contact") ?? "").slice(0, 120);
+  // 30 lookups an hour per visitor is plenty for real customers and stops anyone guessing order numbers.
+  if (!(await allow("track", 30, 3600))) return { status: "notfound", number, contact };
   // Small fixed delay keeps guessing order numbers slow.
   await new Promise((r) => setTimeout(r, 400));
   const data = await findTrackableOrder(number, contact);

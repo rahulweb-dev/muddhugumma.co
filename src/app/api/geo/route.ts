@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { lookupPostcode, reverseGeocode } from "@/lib/geo";
 import { isRegion } from "@/lib/region";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
  *   GET /api/geo?region=in&postcode=500034  → city + state for a pincode / postcode
  */
 export async function GET(req: NextRequest) {
+  if (!(await allow("geo", 60, 3600))) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   const p = req.nextUrl.searchParams;
   const lat = Number(p.get("lat"));
   const lng = Number(p.get("lng"));

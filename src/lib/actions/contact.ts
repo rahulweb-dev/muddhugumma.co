@@ -10,6 +10,7 @@ import { esc, renderEmail, siteUrl } from "@/lib/email-layout";
 import { getSettings } from "@/lib/settings";
 import { REGION_COOKIE } from "@/lib/region";
 import { CONTACT_TOPICS } from "@/lib/contact";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 export type ContactState = { ok: boolean; message?: string; number?: string; errors?: Record<string, string>; values?: Record<string, string> };
 
@@ -30,6 +31,7 @@ export async function sendContactMessage(_prev: ContactState, form: FormData): P
   const raw = Object.fromEntries(["name", "email", "phone", "topic", "orderNumber", "message"].map((k) => [k, String(form.get(k) ?? "")]));
   // Bots fill the hidden "website" field; pretend success so they don't retry.
   if (String(form.get("website") ?? "")) return { ok: true, message: "Thank you, we'll be in touch." };
+  if (!(await allow("contact", 5, 3600))) return { ok: false, message: TOO_MANY };
 
   const parsed = Schema.safeParse(raw);
   if (!parsed.success) {

@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import { Subscriber, User } from "@/lib/models";
 import { REGION_COOKIE, isRegion } from "@/lib/region";
 import { LOOKS, LOOK_COOKIE } from "@/components/catalog/looks";
+import { TOO_MANY, allow } from "@/lib/rate-limit";
 
 export async function setRegionAction(region: string) {
   if (!isRegion(region)) return;
@@ -30,6 +31,7 @@ export async function syncWishlist(slugs: string[]): Promise<string[] | null> {
 export async function subscribeAction(_: unknown, form: FormData): Promise<{ ok: boolean; message: string }> {
   const email = String(form.get("email") || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "Enter a valid email address." };
+  if (!(await allow("subscribe", 10, 3600))) return { ok: false, message: TOO_MANY };
   await db();
   const region = (await cookies()).get(REGION_COOKIE)?.value || "in";
   await Subscriber.updateOne({ email }, { $set: { email, region } }, { upsert: true });
