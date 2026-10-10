@@ -10,6 +10,7 @@ import {
   type ActionResult,
   type CouponInput,
 } from "@/lib/actions/admin";
+import { ORDER_STATUS_LABEL } from "@/lib/admin-labels";
 
 /* ---------- on/off switch used by products and coupons ---------- */
 export function ActiveSwitch({ id, active, kind, label }: { id: string; active: boolean; kind: "product" | "coupon"; label: string }) {
@@ -69,7 +70,7 @@ export function OrderStatusForm({ orderId, status }: { orderId: string; status: 
         <label htmlFor="st">Status</label>
         <select id="st" value={value} onChange={(e) => setValue(e.target.value)}>
           {STATUSES.map((s) => (
-            <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
+            <option key={s} value={s}>{ORDER_STATUS_LABEL[s] ?? s}</option>
           ))}
         </select>
       </div>

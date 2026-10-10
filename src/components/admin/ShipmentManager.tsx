@@ -1,18 +1,19 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addTrackingEventAction, removeTrackingEventAction, saveShipmentAction } from "@/lib/actions/shipping";
+import { addTrackingEventAction, bookWithShiprocket, removeTrackingEventAction, saveShipmentAction } from "@/lib/actions/shipping";
 import { COURIERS, TRACKING_EVENTS, courierById, fmtTrackTime, type ShipmentView, type TrackingCode } from "@/lib/shipping";
 import type { Region } from "@/lib/region";
 
 type Msg = { ok: boolean; text: string } | null;
 const toLocalInput = (iso: string) => (iso ? new Date(iso).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" }).slice(0, 16).replace(" ", "T") : "");
 
-export function ShipmentManager({ orderId, region, status, shipment }: { orderId: string; region: Region; status: string; shipment: ShipmentView | null }) {
+export function ShipmentManager({ orderId, region, status, shipment, shiprocket = false }: { orderId: string; region: Region; status: string; shipment: ShipmentView | null; shiprocket?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState(!shipment);
   const [msg, setMsg] = useState<Msg>(null);
+  const [label, setLabel] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
   const closed = status === "cancelled" || status === "returned";
 
@@ -43,8 +44,30 @@ export function ShipmentManager({ orderId, region, status, shipment }: { orderId
 
   if (closed && !shipment) return <p className="muted adm-small">This order is {status}, so it can&apos;t be shipped.</p>;
 
+  const canBook = shiprocket && !shipment && region === "in" && (status === "confirmed" || status === "packed");
+  const book = () =>
+    start(async () => {
+      const res = await bookWithShiprocket(orderId);
+      setMsg({ ok: res.ok, text: res.ok ? res.message : res.error });
+      if (res.ok) {
+        if (res.labelUrl) setLabel(res.labelUrl);
+        setEditing(false);
+        router.refresh();
+      }
+    });
+
   return (
     <div className="flex flex-col gap-4">
+      {canBook && (
+        <div className="ship-book">
+          <div>
+            <b>Book the courier with Shiprocket</b>
+            <small className="muted block">Creates the shipment, gets the tracking number, asks for a pickup and makes the label. Or enter a courier by hand below.</small>
+          </div>
+          <button type="button" className="btn adm-btn" disabled={pending} onClick={book}>{pending ? "Booking…" : "Book with Shiprocket"}</button>
+        </div>
+      )}
+      {label && <a className="btn ghost adm-btn self-start" href={label} target="_blank" rel="noopener noreferrer">Print shipping label</a>}
       {shipment && !editing && (
         <dl className="adm-dl">
           <div><dt>Courier</dt><dd>{shipment.courierName}</dd></div>

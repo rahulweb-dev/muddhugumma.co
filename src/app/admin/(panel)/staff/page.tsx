@@ -5,16 +5,16 @@ import { db } from "@/lib/db";
 import { Activity, User } from "@/lib/models";
 import { PERMISSIONS, ROLE_LABEL, ROLE_PERMISSIONS, STAFF_ROLES, type StaffRole } from "@/lib/permissions";
 import { fmtDate, fmtDateTime } from "@/lib/admin-data";
-import { AddStaffForm, StaffRowControls } from "@/components/admin/StaffManager";
+import { AddStaffForm, StaffRowControls, StaffStoreControl } from "@/components/admin/StaffManager";
 
 export const metadata: Metadata = { title: "Staff" };
 
-type LeanStaff = { _id: Types.ObjectId; name: string; email: string; phone?: string; role: StaffRole; createdAt?: Date };
+type LeanStaff = { _id: Types.ObjectId; name: string; email: string; phone?: string; role: StaffRole; storeLock?: string; createdAt?: Date };
 
 export default async function StaffPage() {
   const me = await requireAdmin("staff.manage");
   await db();
-  const staff = await User.find({ role: { $in: STAFF_ROLES } }, { name: 1, email: 1, phone: 1, role: 1, createdAt: 1 })
+  const staff = await User.find({ role: { $in: STAFF_ROLES } }, { name: 1, email: 1, phone: 1, role: 1, storeLock: 1, createdAt: 1 })
     .sort({ role: 1, name: 1 })
     .lean<LeanStaff[]>();
   const ids = staff.map((s) => String(s._id));
@@ -45,7 +45,7 @@ export default async function StaffPage() {
       <div className="table-wrap adm-card flush">
         <table className="t adm-t">
           <thead>
-            <tr><th>Name</th><th>Email</th><th>Since</th><th>Last admin action</th><th>Role</th></tr>
+            <tr><th>Name</th><th>Email</th><th>Since</th><th>Last admin action</th><th>Store access</th><th>Role</th></tr>
           </thead>
           <tbody>
             {staff.map((s) => {
@@ -56,6 +56,7 @@ export default async function StaffPage() {
                   <td><a className="adm-a" href={`mailto:${s.email}`}>{s.email}</a></td>
                   <td className="nowrap">{fmtDate(s.createdAt)}</td>
                   <td className="nowrap">{lastSeen.get(id) ? fmtDateTime(lastSeen.get(id)) : <span className="muted">None yet</span>}</td>
+                  <td><StaffStoreControl id={id} name={s.name} role={s.role} lock={s.storeLock === "in" || s.storeLock === "uk" ? s.storeLock : ""} /></td>
                   <td>
                     <StaffRowControls id={id} name={s.name} role={s.role} isMe={id === me.uid} lastAdmin={s.role === "admin" && admins <= 1} />
                   </td>

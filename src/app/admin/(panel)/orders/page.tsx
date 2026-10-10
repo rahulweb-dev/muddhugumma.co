@@ -5,8 +5,10 @@ import { db } from "@/lib/db";
 import { Order } from "@/lib/models";
 import { formatMoney } from "@/lib/region";
 import { ORDER_STATUS_LIST, escapeRx, first, fmtDateTime, qs, type LeanOrder } from "@/lib/admin-data";
-import { REGION_FLAG, getAdminScope } from "@/lib/admin-scope";
+import { REGION_FLAG, getAdminScope, getStoreLock } from "@/lib/admin-scope";
 import { PAYMENT_METHOD_LABEL, orderStatusLabel, paymentStatusLabel } from "@/lib/admin-labels";
+import { OrderBulkBar, OrderCheck, OrderCheckAll } from "@/components/admin/OrderBulkBar";
+import { can } from "@/lib/permissions";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -14,14 +16,15 @@ const PER_PAGE = 25;
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function AdminOrders({ searchParams }: { searchParams: SP }) {
-  await requireAdmin("orders.view");
+  const me = await requireAdmin("orders.view");
   const sp = await searchParams;
   const statusRaw = first(sp.status);
   const status = (ORDER_STATUS_LIST as readonly string[]).includes(statusRaw) ? statusRaw : "";
   // No ?region: follow the store picked in the top bar. ?region=all shows both whatever the top bar says.
   const regionRaw = first(sp.region);
   const scope = await getAdminScope();
-  const region = regionRaw === "in" || regionRaw === "uk" ? regionRaw : regionRaw === "all" ? "" : scope === "all" ? "" : scope;
+  const lock = await getStoreLock();
+  const region = lock || (regionRaw === "in" || regionRaw === "uk" ? regionRaw : regionRaw === "all" ? "" : scope === "all" ? "" : scope);
   const q = first(sp.q).trim().slice(0, 80);
   const page = Math.max(1, Math.floor(Number(first(sp.page)) || 1));
 
@@ -85,11 +88,12 @@ export default async function AdminOrders({ searchParams }: { searchParams: SP }
           <div className="table-wrap adm-card flush">
             <table className="t adm-t">
               <thead>
-                <tr><th>Order</th><th>Placed</th><th>Customer</th><th>Ship to</th><th className="num">Items</th><th>Payment</th><th>Status</th><th className="num">Total</th></tr>
+                <tr><th className="ord-check-cell"><OrderCheckAll /></th><th>Order</th><th>Placed</th><th>Customer</th><th>Ship to</th><th className="num">Items</th><th>Payment</th><th>Status</th><th className="num">Total</th></tr>
               </thead>
               <tbody>
                 {orders.map((o) => (
                   <tr key={String(o._id)}>
+                    <td className="ord-check-cell"><OrderCheck id={String(o._id)} label={o.number} /></td>
                     <td><Link className="adm-a" href={`/admin/orders/${o._id}`}>{REGION_FLAG[o.region === "uk" ? "uk" : "in"]} {o.number}</Link></td>
                     <td className="nowrap">{fmtDateTime(o.createdAt)}</td>
                     <td>{o.address?.name || "—"}<br /><small className="muted">{o.email}</small></td>
@@ -103,6 +107,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: SP }
               </tbody>
             </table>
           </div>
+          <OrderBulkBar canManage={can(me.role, "orders.manage")} canShip={can(me.role, "orders.ship")} />
           {pages > 1 && (
             <nav className="adm-pager" aria-label="Pages">
               {page > 1 ? <Link href={`/admin/orders${qs(base, { page: page - 1 })}`}>← Newer</Link> : <span />}

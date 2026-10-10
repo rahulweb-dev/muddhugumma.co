@@ -48,7 +48,7 @@ export async function Header({ region }: { region: Region }) {
           <div className="h-left">
             <MobileMenu nav={NAV} />
           </div>
-          <Link className="logo" href="/" aria-label="House of Muddhugumma home">
+          <Link className="logo" href="/" title="House of Muddhugumma home">
             <Image src="brand/logo.webp" alt="" width={64} height={64} quality={90} priority />
             <div>
               <small>HOUSE OF</small>

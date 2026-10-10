@@ -5,10 +5,11 @@ import { db } from "@/lib/db";
 import { Product, StockLog, type ProductDoc, type StockLogDoc } from "@/lib/models";
 import { getSettings } from "@/lib/settings";
 import { escapeRx, first, fmtDateTime } from "@/lib/admin-data";
-import { REGION_FLAG, REGION_NAME, getAdminScope, isScope, scopeRegions } from "@/lib/admin-scope";
+import { REGION_FLAG, REGION_NAME, isScope, requestedScope, scopeRegions } from "@/lib/admin-scope";
 import { stockFor } from "@/lib/stock";
 import { StockTable, type StockRow } from "@/components/admin/StockTable";
 import type { Region } from "@/lib/region";
+import { forecastFor, salesVelocity } from "@/lib/stock-forecast";
 
 export const metadata: Metadata = { title: "Stock" };
 
@@ -20,6 +21,11 @@ const REASON_LABEL: Record<string, string> = {
   damaged: "Damaged or lost",
   correction: "Count correction",
   transfer: "Moved between India and UK",
+  sale: "Sold online",
+  order_cancelled: "Order cancelled (back in stock)",
+  order_reopened: "Cancelled order reopened",
+  return_received: "Return received (back in stock)",
+  exchange_sent: "Exchange sent",
 };
 
 export default async function StockPage({ searchParams }: { searchParams: SP }) {
@@ -27,10 +33,10 @@ export default async function StockPage({ searchParams }: { searchParams: SP }) 
   const sp = await searchParams;
   const q = first(sp.q).trim().slice(0, 80);
   const showRaw = first(sp.show);
-  const show = showRaw === "low" || showRaw === "out" ? showRaw : "";
+  const show = showRaw === "low" || showRaw === "out" || showRaw === "soon" ? showRaw : "";
   const storeRaw = first(sp.store);
   // ?store= (from dashboard links) overrides the top-bar switcher for this page only.
-  const scope = isScope(storeRaw) ? storeRaw : await getAdminScope();
+  const scope = await requestedScope(storeRaw);
   const regions = scopeRegions(scope);
 
   await db();
@@ -42,6 +48,8 @@ export default async function StockPage({ searchParams }: { searchParams: SP }) 
     StockLog.find(scope === "all" ? {} : { region: scope }).sort({ createdAt: -1 }).limit(30).lean<(StockLogDoc & { _id: unknown })[]>(),
   ]);
 
+  const velocity = await salesVelocity(regions);
+  const SIZE_KEYS = ["XS", "S", "M", "L", "XL", "XXL"];
   const rows: StockRow[] = docs
     .map((p) => ({
       id: String(p._id),
@@ -51,6 +59,14 @@ export default async function StockPage({ searchParams }: { searchParams: SP }) 
       freeSize: !!p.freeSize,
       active: p.active !== false,
       stock: Object.fromEntries(regions.map((r) => [r, stockFor(p, r)])) as StockRow["stock"],
+      // Soonest sell-out per store at the last 30 days' pace, and how many to add to cover the next 30 days.
+      forecast: Object.fromEntries(
+        regions.map((r) => {
+          const f = forecastFor(p.slug, r, stockFor(p, r), p.freeSize ? ["Free size"] : SIZE_KEYS, velocity);
+          const soonest = f.reduce<(typeof f)[number] | null>((a, x) => (!a || x.days < a.days ? x : a), null);
+          return [r, soonest ? { days: soonest.days, size: soonest.size, restock: f.reduce((a, x) => a + x.restock, 0) } : null];
+        })
+      ) as StockRow["forecast"],
     }))
     .filter((row) => {
       if (!show) return true;
@@ -58,6 +74,7 @@ export default async function StockPage({ searchParams }: { searchParams: SP }) 
         const s = row.stock[r] ?? {};
         return row.freeSize ? [s["Free size"] ?? 0] : ["XS", "S", "M", "L", "XL", "XXL"].map((k) => s[k] ?? 0);
       };
+      if (show === "soon") return regions.some((r) => (row.forecast?.[r]?.days ?? Infinity) <= 14);
       return regions.some((r) => (show === "out" ? vals(r).some((v) => v <= 0) : vals(r).some((v) => v <= t)));
     });
 
@@ -99,6 +116,7 @@ export default async function StockPage({ searchParams }: { searchParams: SP }) 
         {tab("", "All products")}
         {tab("low", `Running low (${t} or fewer)`)}
         {tab("out", "Sold out sizes")}
+        {tab("soon", "Selling fast (out within 2 weeks)")}
         {(storeRaw === "in" || storeRaw === "uk") && <span className="muted adm-small">Showing {REGION_NAME[storeRaw]} only (from the dashboard) · <Link className="adm-a" href="/admin/stock">Show the top-bar store</Link></span>}
       </nav>
 
@@ -107,7 +125,7 @@ export default async function StockPage({ searchParams }: { searchParams: SP }) 
       <section className="adm-card" aria-labelledby="hist-h">
         <div className="adm-card-head">
           <h2 className="h3" id="hist-h">Recent stock changes</h2>
-          <span className="muted adm-small">Changes made here. Sales, cancellations and returns update stock automatically.</span>
+          <span className="muted adm-small">Every change: edits made here, online sales, cancellations, returns and exchanges.</span>
         </div>
         {logs.length ? (
           <div className="table-wrap">
@@ -117,14 +135,14 @@ export default async function StockPage({ searchParams }: { searchParams: SP }) 
               </thead>
               <tbody>
                 {logs.map((l) => {
-                  const d = (l.to ?? 0) - (l.from ?? 0);
+                  const d = l.change ?? (l.to ?? 0) - (l.from ?? 0);
                   return (
                     <tr key={String(l._id)}>
                       <td className="nowrap">{fmtDateTime(l.createdAt)}</td>
                       <td>{l.name}</td>
                       <td className="nowrap">{REGION_FLAG[l.region]} {REGION_NAME[l.region]}</td>
                       <td>{l.size}</td>
-                      <td className="num nowrap"><span className={d >= 0 ? "dash-up" : "dash-down"}>{d >= 0 ? `+${d}` : d}</span> <small className="muted">({l.from} → {l.to})</small></td>
+                      <td className="num nowrap"><span className={d >= 0 ? "dash-up" : "dash-down"}>{d >= 0 ? `+${d}` : d}</span> {l.from !== undefined && l.to !== undefined ? <small className="muted">({l.from} → {l.to})</small> : null}</td>
                       <td>{REASON_LABEL[l.reason] ?? l.reason}{l.note ? <small className="muted block">{l.note}</small> : null}</td>
                       <td>{l.byName}</td>
                     </tr>

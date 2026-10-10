@@ -10,7 +10,8 @@ import { formatMoney, type Region } from "@/lib/region";
 import { dayKey, first, fmtDateTime, startOfToday, stitchingItemMatch, type LeanOrder } from "@/lib/admin-data";
 import { REGION_FLAG, REGION_NAME, getAdminScope, scopeFilter, scopeRegions } from "@/lib/admin-scope";
 import { orderStatusLabel, paymentStatusLabel } from "@/lib/admin-labels";
-import { stockField } from "@/lib/stock";
+import { stockField, stockFor } from "@/lib/stock";
+import { forecastFor, salesVelocity } from "@/lib/stock-forecast";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -134,6 +135,17 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
       : none([] as (readonly [Region, LowRow[]])[]),
   ]);
 
+  // Products whose fastest size runs out within 2 weeks at the last 30 days' pace.
+  let sellingFast = 0;
+  if (may("products.manage")) {
+    const [velocity, prods] = await Promise.all([
+      salesVelocity(regions),
+      Product.find({ active: true }, { slug: 1, freeSize: 1, stock: 1, stockUk: 1 }).lean<{ slug: string; freeSize?: boolean; stock?: unknown; stockUk?: unknown }[]>(),
+    ]);
+    const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+    sellingFast = prods.filter((p) => regions.some((r) => forecastFor(p.slug, r, stockFor(p, r), p.freeSize ? ["Free size"] : sizes, velocity).some((f) => f.days <= 14))).length;
+  }
+
   const money = (r: Region, n: number) => formatMoney(Math.round(n * 100) / 100, r);
   const sum = (r: Region, buckets: string[]) => {
     const rows = sales.filter((s) => s._id.region === r && buckets.includes(s._id.bucket));
@@ -156,6 +168,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
   if (may("orders.view")) todo.push({ label: "New, not paid yet", n: newOrders, href: "/admin/orders?status=placed", note: newOrders ? "Online payment still pending" : "None", tone: "warn" });
   if (may("returns.manage")) todo.push({ label: "Returns to handle", n: returnsOpen, href: "/admin/returns", note: returnsOpen ? "Requested, collected or received" : "None open", tone: "act" });
   if (may("products.manage")) todo.push({ label: "Sizes sold out", n: soldOutSizes, href: "/admin/stock?show=out", note: soldOutSizes ? "Restock or hide them" : "Everything in stock", tone: "warn" });
+  if (may("products.manage")) todo.push({ label: "Selling fast", n: sellingFast, href: "/admin/stock?show=soon", note: sellingFast ? "Will sell out within 2 weeks" : "Nothing running out soon", tone: "warn" });
   if (may("stitching.manage")) todo.push({ label: "In tailoring", n: stitchingOpen, href: "/admin/stitching", note: "Blouses and made-to-order", tone: "act" });
   if (may("bookings.manage")) todo.push({ label: "Video consults to confirm", n: bookingsRequested, href: "/admin/bookings", note: "Waiting for a time slot", tone: "act" });
   if (may("reviews.manage")) todo.push({ label: "Reviews to approve", n: reviewsPending, href: "/admin/reviews", note: "Not on the site yet", tone: "act" });

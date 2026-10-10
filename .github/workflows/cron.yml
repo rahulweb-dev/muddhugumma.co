@@ -14,13 +14,14 @@ on:
     - cron: "30 3 * * *" # birthdays (09:00 IST)
     - cron: "0 4 * * *" # low-stock (09:30 IST)
     - cron: "30 4 * * *" # review-requests (10:00 IST)
+    - cron: "30 2 * * *" # daily-summary (08:00 IST)
   workflow_dispatch:
     inputs:
       job:
         description: "Job to run"
         required: true
         type: choice
-        options: [back-in-stock, abandoned-carts, birthdays, low-stock, review-requests]
+        options: [back-in-stock, abandoned-carts, birthdays, low-stock, review-requests, daily-summary]
 
 jobs:
   run:
@@ -36,6 +37,7 @@ jobs:
             "30 3 * * *") job=birthdays ;;
             "0 4 * * *") job=low-stock ;;
             "30 4 * * *") job=review-requests ;;
+            "30 2 * * *") job=daily-summary ;;
             *) job="${{ inputs.job }}" ;;
           esac
           echo "job=$job" >> "$GITHUB_OUTPUT"

@@ -9,6 +9,7 @@ import { Order, Product } from "@/lib/models";
 import { formatMoney, REGION_CONFIG } from "@/lib/region";
 import { MEASUREMENT_FIELDS, STITCH_LABEL, codToCollect, first, fmtDate, isStitchingItem, type LeanOrder, type StitchStatusKey } from "@/lib/admin-data";
 import { PrintButton } from "@/components/admin/PrintButton";
+import { canSeeRegion } from "@/lib/admin-scope";
 
 export const metadata: Metadata = { title: "Packing slip" };
 
@@ -20,7 +21,7 @@ export default async function PackingSlip({ params, searchParams }: { params: Pr
   if (!mongoose.isValidObjectId(id)) notFound();
   await db();
   const [o, settings] = await Promise.all([Order.findById(id).lean<LeanOrder>(), getSettings()]);
-  if (!o) notFound();
+  if (!o || !(await canSeeRegion(o.region))) notFound();
   const mto = new Set<string>(await Product.distinct("slug", { slug: { $in: o.items.map((i) => i.slug).filter(Boolean) }, madeToOrder: true }));
 
   const r = o.region;

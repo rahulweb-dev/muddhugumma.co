@@ -12,7 +12,7 @@ const OPTIONS: { value: Scope; label: string; flag: string }[] = [
 ];
 
 /** Admin top bar: find anything, and pick which store every admin page shows (both, India or UK). */
-export function AdminTopBar({ scope }: { scope: Scope }) {
+export function AdminTopBar({ scope, locked = false }: { scope: Scope; locked?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const pick = (s: Scope) =>
@@ -27,6 +27,12 @@ export function AdminTopBar({ scope }: { scope: Scope }) {
         <Icon name="search" size={16} />
         <input name="q" type="search" placeholder="Find an order, product or customer…" aria-label="Search the admin" autoComplete="off" />
       </form>
+      {locked ? (
+        <div className="adm-scope" title="Your account is set to one country. Ask the store owner to change it.">
+          <span className="adm-scope-label">Store</span>
+          <span className="adm-scope-lock">{OPTIONS.find((o) => o.value === scope)?.flag} {OPTIONS.find((o) => o.value === scope)?.label} only</span>
+        </div>
+      ) : (
       <div className="adm-scope" role="radiogroup" aria-label="Which store to show" aria-busy={pending || undefined}>
         <span className="adm-scope-label">Store</span>
         {OPTIONS.map((o) => (
@@ -35,6 +41,7 @@ export function AdminTopBar({ scope }: { scope: Scope }) {
           </button>
         ))}
       </div>
+      )}
     </div>
   );
 }

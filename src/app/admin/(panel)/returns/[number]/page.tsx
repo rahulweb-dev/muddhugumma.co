@@ -12,6 +12,7 @@ import { courierName, trackingLink } from "@/lib/shipping";
 import { dayKey, fmtDate, fmtDateTime } from "@/lib/admin-data";
 import { ReturnActions } from "@/components/admin/content/ReturnActions";
 import { returnTone } from "@/components/admin/content/shared";
+import { canSeeRegion } from "@/lib/admin-scope";
 
 export const metadata: Metadata = { title: "Return" };
 
@@ -27,7 +28,7 @@ export default async function AdminReturn({ params }: { params: Promise<{ number
   const number = decodeURIComponent(raw).slice(0, 60);
   await db();
   const r = await ReturnRequest.findOne({ number }).lean<LeanReturn>();
-  if (!r) notFound();
+  if (!r || !(await canSeeRegion(r.region))) notFound();
   const o = await Order.findOne({ number: r.orderNumber }, { number: 1, email: 1, createdAt: 1, status: 1, payment: 1, address: 1, "shipment.deliveredAt": 1 }).lean<LeanOrderLite>();
 
   const region = r.region === "uk" ? "uk" : "in";

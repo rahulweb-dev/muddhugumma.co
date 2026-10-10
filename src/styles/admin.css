@@ -309,6 +309,7 @@
   .adm-scope button{height:32px; padding:0 12px; font-size:13px; font-weight:600; color:var(--muted); background:transparent; border:0; cursor:pointer; white-space:nowrap}
   .adm-scope button:hover{color:var(--ink)}
   .adm-scope button[aria-checked="true"]{background:var(--ink); color:var(--on)}
+  .adm-scope-lock{height:32px; display:inline-flex; align-items:center; padding:0 12px; background:var(--ink); color:var(--on); font-size:13px; font-weight:600}
   @media (min-width:900px){ .adm-top{padding:12px 28px} }
 
   /* ---------- dashboard ---------- */
@@ -370,4 +371,23 @@
   .stock-bar .field{flex:1 1 180px}
   .stock-bar .field.grow{flex:2 1 220px}
   @media (min-width:900px){ .stock-bar > b{flex-basis:auto; align-self:center; margin-right:6px} }
+
+  /* ---------- order page: progress + next step ---------- */
+  .ord-steps{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px}
+  .ord-steps li{display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 4px; font-size:12px; font-weight:600; color:var(--muted); text-align:center; border-top:3px solid var(--line)}
+  .ord-steps li span{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:var(--stone-2); color:var(--muted); font-size:12px}
+  .ord-steps li.done{color:var(--ok); border-top-color:var(--ok)}
+  .ord-steps li.done span{background:var(--ok); color:var(--on)}
+  .ord-steps li.now{color:var(--ink); border-top-color:var(--bronze)}
+  .ord-steps li.now span{background:var(--bronze); color:var(--on)}
+  .ord-next{border-left:4px solid var(--bronze)}
+  .ord-ended{font-weight:600}
+  .stock-soon{color:var(--bronze); font-weight:600}
+  /* orders list: bulk selection */
+  .ord-check-cell{width:36px}
+  .ord-check{width:18px; height:18px; accent-color:var(--ink); cursor:pointer}
+  /* bulk print: one order per sheet */
+  .print-sheet + .print-sheet{border-top:2px dashed var(--line); padding-top:24px}
+  @media print{ .print-sheet{break-after:page} .print-sheet + .print-sheet{border:0; padding:0} }
+  .ship-book{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:12px; background:var(--stone); border-left:4px solid var(--bronze)}
 }

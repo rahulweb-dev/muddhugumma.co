@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addStaff, changeStaffRole, removeStaff, type StaffResult } from "@/lib/actions/staff";
+import { addStaff, changeStaffRole, removeStaff, setStaffStoreLock, type StaffResult } from "@/lib/actions/staff";
 import { ROLE_LABEL, STAFF_ROLES, type StaffRole } from "@/lib/permissions";
 
 const Msg = ({ m }: { m: StaffResult | null }) => (m ? <p className={`notice ${m.ok ? "ok" : "err"}`} role="status">{m.ok ? m.message : m.error}</p> : null);
@@ -60,6 +60,40 @@ export function AddStaffForm() {
       </div>
       <Msg m={msg} />
     </form>
+  );
+}
+
+/** Store access: both countries, or India / UK only (e.g. the UK packer only sees UK orders and stock). */
+export function StaffStoreControl({ id, name, role, lock }: { id: string; name: string; role: StaffRole; lock: "" | "in" | "uk" }) {
+  const router = useRouter();
+  const [value, setValue] = useState(lock);
+  const [msg, setMsg] = useState<StaffResult | null>(null);
+  const [pending, start] = useTransition();
+  if (role === "admin") return <small className="muted">Both (admins see everything)</small>;
+  return (
+    <div className="adm-stack gap-2">
+      <select
+        aria-label={`Store access for ${name}`}
+        className="adm-select"
+        value={value}
+        disabled={pending}
+        onChange={(e) => {
+          const next = e.target.value as "" | "in" | "uk";
+          setValue(next);
+          start(async () => {
+            const res = await setStaffStoreLock(id, next);
+            setMsg(res);
+            if (res.ok) router.refresh();
+            else setValue(lock);
+          });
+        }}
+      >
+        <option value="">🇮🇳 India + 🇬🇧 UK</option>
+        <option value="in">🇮🇳 India only</option>
+        <option value="uk">🇬🇧 UK only</option>
+      </select>
+      <Msg m={msg} />
+    </div>
   );
 }
 

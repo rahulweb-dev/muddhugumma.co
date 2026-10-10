@@ -110,7 +110,7 @@ export default async function AdminSearch({ searchParams }: { searchParams: SP }
           <ul className="adm-list">
             {customers.map((c) => (
               <li key={String(c._id)}>
-                <Link href={`/admin/customers?q=${encodeURIComponent(c.email)}`}>
+                <Link href={`/admin/customers/${c._id}`}>
                   <div>
                     <b>{c.name}</b>
                     <small className="muted">{c.email}{c.phone ? ` · ${c.phone}` : ""}</small>

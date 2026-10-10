@@ -11,12 +11,15 @@ import { formatMoney, REGION_CONFIG } from "@/lib/region";
 import { STITCH_LABEL, codToCollect, fmtDateTime, isStitchingItem, type LeanOrder, type StitchStatusKey } from "@/lib/admin-data";
 import { OrderStatusForm, PaymentButtons } from "@/components/admin/AdminControls";
 import { ShipmentManager } from "@/components/admin/ShipmentManager";
+import { shiprocketConfigured } from "@/lib/shiprocket";
 import { toShipmentView } from "@/lib/tracking";
 import type { ShipmentDoc } from "@/lib/models";
+import { REGION_FLAG, canSeeRegion } from "@/lib/admin-scope";
+import { PAYMENT_METHOD_LABEL, orderStatusLabel, paymentStatusLabel } from "@/lib/admin-labels";
+import { OrderNextStep, OrderProgress } from "@/components/admin/OrderQuickActions";
 
 export const metadata: Metadata = { title: "Order" };
 
-const METHOD: Record<string, string> = { cod: "Cash on delivery", cashfree: "Cashfree", razorpay: "Razorpay", stripe: "Stripe", test: "Test payment", giftcard: "Gift card" };
 
 export default async function AdminOrder({ params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin("orders.view");
@@ -24,7 +27,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ id: str
   if (!mongoose.isValidObjectId(id)) notFound();
   await db();
   const o = await Order.findById(id).lean<LeanOrder & { shipment?: ShipmentDoc }>();
-  if (!o) notFound();
+  if (!o || !(await canSeeRegion(o.region))) notFound();
   const [user, prevOrders, mto] = await Promise.all([
     o.userId && mongoose.isValidObjectId(o.userId)
       ? User.findById(o.userId, { name: 1, phone: 1, createdAt: 1 }).lean<{ name?: string; phone?: string; createdAt?: Date }>()
@@ -52,18 +55,30 @@ export default async function AdminOrder({ params }: { params: Promise<{ id: str
       <header className="adm-head">
         <div>
           <p className="kick"><Link href="/admin/orders">Orders</Link> / {o.number}</p>
-          <h1 className="adm-title">Order {o.number}</h1>
+          <h1 className="adm-title">{REGION_FLAG[r === "uk" ? "uk" : "in"]} Order {o.number}</h1>
           <p className="muted adm-small">
-            Placed {fmtDateTime(o.createdAt)} · {REGION_CONFIG[r].label} ({REGION_CONFIG[r].currency})
+            {a.name || o.email} · placed {fmtDateTime(o.createdAt)} · {REGION_CONFIG[r].label} ({REGION_CONFIG[r].currency}) · <b>{money(o.total)}</b>
           </p>
         </div>
         <div className="adm-row">
-          <span className={`status ${o.status}`}>{o.status}</span>
-          <span className={`status ${payStatus}`}>{payStatus}</span>
-          {may.ship && <Link className="btn ghost adm-btn" href={`/admin/orders/${o._id}/slip`} target="_blank">Packing slip</Link>}
-          {may.manage && <Link className="btn ghost adm-btn" href={`/admin/orders/${o._id}/invoice`} target="_blank">Invoice</Link>}
+          <span className={`status ${o.status}`}>{orderStatusLabel(o.status)}</span>
+          <span className={`status ${payStatus}`}>{paymentStatusLabel(payStatus)}</span>
         </div>
       </header>
+
+      <OrderProgress status={o.status} />
+      <OrderNextStep
+        orderId={String(o._id)}
+        number={o.number}
+        status={o.status}
+        paid={payStatus === "paid"}
+        cod={o.payment?.method === "cod"}
+        canManage={may.manage}
+        canShip={may.ship}
+        phone={a.phone || user?.phone || ""}
+        name={a.name || user?.name || ""}
+        region={r === "uk" ? "uk" : "in"}
+      />
 
       {o.gift?.wrap ? (
         <p className="notice" role="note">
@@ -120,12 +135,12 @@ export default async function AdminOrder({ params }: { params: Promise<{ id: str
           </section>
 
           <section className="adm-card">
-            <h2 className="h3">History</h2>
+            <h2 className="h3">What happened so far</h2>
             {history.length ? (
               <ol className="adm-timeline">
                 {history.map((h, i) => (
                   <li key={i} className={i === 0 ? "now" : ""}>
-                    <span className={`status ${(h.status ?? "").replace(/^payment /, "")}`}>{h.status}</span>
+                    <span className={`status ${(h.status ?? "").replace(/^payment /, "")}`}>{orderStatusLabel(h.status) || h.status}</span>
                     <time className="muted adm-small">{fmtDateTime(h.at)}</time>
                     {h.note ? <p>{h.note}</p> : null}
                   </li>
@@ -141,7 +156,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ id: str
           <section className="adm-card" id="shipment">
             <h2 className="h3">Shipment &amp; tracking</h2>
             {may.ship ? (
-              <ShipmentManager orderId={String(o._id)} region={r} status={o.status} shipment={shipment} />
+              <ShipmentManager orderId={String(o._id)} region={r} status={o.status} shipment={shipment} shiprocket={shiprocketConfigured()} />
             ) : shipment ? (
               <dl className="adm-dl">
                 <div><dt>Courier</dt><dd>{shipment.courierName}</dd></div>
@@ -155,7 +170,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ id: str
 
           {may.manage && (
             <section className="adm-card">
-              <h2 className="h3">Update status</h2>
+              <h2 className="h3">Change status manually</h2>
               <OrderStatusForm orderId={String(o._id)} status={o.status} />
             </section>
           )}
@@ -163,8 +178,8 @@ export default async function AdminOrder({ params }: { params: Promise<{ id: str
           <section className="adm-card">
             <h2 className="h3">Payment</h2>
             <dl className="adm-dl">
-              <div><dt>Method</dt><dd>{METHOD[o.payment?.method ?? ""] ?? o.payment?.method ?? "—"}{o.partialCod?.paidOnline ? " (part paid online)" : ""}</dd></div>
-              <div><dt>Status</dt><dd><span className={`status ${payStatus}`}>{payStatus}</span></dd></div>
+              <div><dt>Method</dt><dd>{PAYMENT_METHOD_LABEL[o.payment?.method ?? ""] ?? o.payment?.method ?? "—"}{o.partialCod?.paidOnline ? " (part paid online)" : ""}</dd></div>
+              <div><dt>Status</dt><dd><span className={`status ${payStatus}`}>{paymentStatusLabel(payStatus)}</span></dd></div>
               {o.payment?.ref ? <div><dt>Reference</dt><dd><code>{o.payment.ref}</code></dd></div> : null}
               {o.payment?.method === "cod" ? <div><dt>COD phone verified</dt><dd>{o.codVerified ? "Yes" : "No"}</dd></div> : null}
               <div><dt>Amount</dt><dd>{money(o.total)}</dd></div>
@@ -180,7 +195,8 @@ export default async function AdminOrder({ params }: { params: Promise<{ id: str
               <div><dt>Email</dt><dd><a className="adm-a" href={`mailto:${o.email}`}>{o.email}</a></dd></div>
               {(a.phone || user?.phone) ? <div><dt>Phone</dt><dd><a className="adm-a" href={`tel:${a.phone || user?.phone}`}>{a.phone || user?.phone}</a></dd></div> : null}
               <div><dt>Account</dt><dd>{user ? `Registered ${fmtDateTime(user.createdAt).split(",")[0]}` : "Guest checkout"}</dd></div>
-              <div><dt>Other orders</dt><dd>{prevOrders ? <Link className="adm-a" href={`/admin/orders?q=${encodeURIComponent(o.email)}`}>{prevOrders}</Link> : "First order"}</dd></div>
+              <div><dt>Other orders</dt><dd>{prevOrders ? <Link className="adm-a" href={`/admin/orders?q=${encodeURIComponent(o.email)}&region=all`}>{prevOrders}</Link> : "First order"}</dd></div>
+              {o.userId ? <div><dt>Profile</dt><dd><Link className="adm-a" href={`/admin/customers/${o.userId}`}>Open customer profile</Link></dd></div> : null}
             </dl>
           </section>
 

@@ -107,3 +107,19 @@ export async function removeStaff(userId: string): Promise<StaffResult> {
   revalidatePath("/admin/staff");
   return { ok: true, message: `${u.name} has been removed from the team. Their customer account and orders are kept.` };
 }
+
+/** Limits a team member's admin to one country ("in" / "uk"), or lets them see both (""). Admins always see both. */
+export async function setStaffStoreLock(userId: string, lock: string): Promise<StaffResult> {
+  const me = await staffCan("staff.manage");
+  if (!me) return NO;
+  if (!mongoose.isValidObjectId(userId)) return { ok: false, error: "Unknown team member." };
+  if (lock !== "" && lock !== "in" && lock !== "uk") return { ok: false, error: "Choose India, UK or both." };
+  await db();
+  const u = await User.findById(userId, { name: 1, email: 1, role: 1 }).lean<{ name: string; email: string; role: string }>();
+  if (!u || !isStaff(u.role)) return { ok: false, error: "That person isn't on the team any more." };
+  if (u.role === "admin" && lock) return { ok: false, error: "Admins always see both stores. Change their role first." };
+  await User.updateOne({ _id: userId }, { $set: { storeLock: lock } });
+  await logActivity(me, "staff.store", { target: u.email, targetId: userId, meta: { store: lock || "both" } });
+  revalidatePath("/admin/staff");
+  return { ok: true, message: lock ? `${u.name} now only sees the ${lock === "uk" ? "UK" : "India"} store.` : `${u.name} can see both stores.` };
+}

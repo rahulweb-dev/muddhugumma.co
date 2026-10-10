@@ -8,6 +8,7 @@ import { Order } from "@/lib/models";
 import { getInvoice } from "@/lib/invoice";
 import { InvoiceView } from "@/components/invoice/InvoiceView";
 import { PrintButton } from "@/components/invoice/PrintButton";
+import { canSeeRegion } from "@/lib/admin-scope";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -16,8 +17,8 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
   const { id } = await params;
   if (!mongoose.isValidObjectId(id)) notFound();
   await db();
-  const o = await Order.findById(id, { number: 1, status: 1 }).lean<{ number: string; status: string }>();
-  if (!o) notFound();
+  const o = await Order.findById(id, { number: 1, status: 1, region: 1 }).lean<{ number: string; status: string; region?: string }>();
+  if (!o || !(await canSeeRegion(o.region))) notFound();
   const inv = await getInvoice(o.number);
 
   return (

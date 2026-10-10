@@ -84,7 +84,7 @@ export default async function AdminCustomers({ searchParams }: { searchParams: S
                   const s = statsFor(String(u._id));
                   return (
                     <tr key={String(u._id)}>
-                      <td>{u.name}</td>
+                      <td><Link className="adm-a" href={`/admin/customers/${u._id}`}>{u.name}</Link></td>
                       <td><a className="adm-a" href={`mailto:${u.email}`}>{u.email}</a></td>
                       <td className="nowrap">{u.phone || <span className="muted">—</span>}</td>
                       <td className="nowrap">{fmtDate(u.createdAt)}</td>

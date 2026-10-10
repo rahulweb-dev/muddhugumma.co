@@ -16,9 +16,11 @@
   .gal-track:focus-visible{outline-offset:-2px}
   .gal-slide{aspect-ratio:3/4; scroll-snap-align:start; scroll-snap-stop:always}
   .gal-slide img{object-position:50% 20%}
-  .gal-dots{display:flex; justify-content:center; gap:7px; padding-top:12px}
-  .gal-dots button{width:6px; height:6px; border-radius:50%; background:var(--stone-2); transition:width .25s, background .25s}
-  .gal-dots button[aria-current="true"]{width:20px; border-radius:99px; background:var(--ink)}
+  .gal-dots{display:flex; justify-content:center; gap:0; padding-top:4px}
+  /* 24px tap area (accessibility minimum) around the same small dot */
+  .gal-dots button{position:relative; min-width:24px; height:24px; padding:0 9px; background:transparent; display:grid; place-items:center}
+  .gal-dots button::before{content:""; display:block; width:6px; height:6px; border-radius:50%; background:var(--stone-2); transition:width .25s, background .25s}
+  .gal-dots button[aria-current="true"]::before{width:20px; border-radius:99px; background:var(--ink)}
   @media (min-width:900px){
     .gal{display:grid; grid-template-columns:76px minmax(0,1fr); gap:14px; position:sticky; top:calc(var(--head-h) + 24px)}
     .gal.single{grid-template-columns:minmax(0,1fr)}

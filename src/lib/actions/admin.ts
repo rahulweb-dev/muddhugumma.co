@@ -12,6 +12,7 @@ import { stockPath } from "@/lib/stock";
 import { renameProductSlug } from "@/lib/product-slugs";
 import { ProductInputSchema, productDoc, productRuleError } from "@/lib/admin-data";
 import { allCategories } from "@/lib/categories";
+import { logStockMoves } from "@/lib/stock-log";
 
 /* ---------- shared ---------- */
 export type ActionResult = { ok: true; message?: string; id?: string; slug?: string } | { ok: false; error: string; fields?: Record<string, string> };
@@ -116,10 +117,13 @@ export async function toggleProductActive(id: string, active: boolean): Promise<
 }
 
 /* ---------- orders ---------- */
-type LeanOrderItems = { number: string; status: string; region?: Region; items: { productId?: string; slug?: string; size?: string; qty?: number }[] };
+type LeanOrderItems = { number: string; status: string; region?: Region; items: { productId?: string; slug?: string; name?: string; size?: string; qty?: number }[] };
 
 /** Puts an order's pieces back into (or takes them out of) the stock of the country it was sold in. */
-async function adjustStock(items: LeanOrderItems["items"], region: Region, sign: 1 | -1) {
+async function adjustStock(items: LeanOrderItems["items"], region: Region, sign: 1 | -1, log: { number: string; to: string; by: { uid: string; name: string } }) {
+  await logStockMoves(
+    items.map((it) => ({ productId: it.productId, slug: it.slug, name: it.name, region, size: canonicalSize(it.size ?? ""), change: Math.max(0, Number(it.qty) || 0) * sign, reason: sign > 0 ? "order_cancelled" : "order_reopened", note: `Order ${log.number} marked ${log.to}`, by: log.by }))
+  );
   await Promise.all(
     items.map((it) => {
       const n = Math.max(0, Number(it.qty) || 0) * sign;
@@ -146,8 +150,9 @@ export async function updateOrderStatus(orderId: string, status: string, note = 
   const nowOut = RESTOCKED.has(status);
   // Cancelled or returned orders put their pieces back on the shelf; reopening one takes them out again.
   const region: Region = order.region === "uk" ? "uk" : "in";
-  if (!wasOut && nowOut) await adjustStock(order.items, region, 1);
-  if (wasOut && !nowOut) await adjustStock(order.items, region, -1);
+  const log = { number: order.number, to: status, by: admin };
+  if (!wasOut && nowOut) await adjustStock(order.items, region, 1, log);
+  if (wasOut && !nowOut) await adjustStock(order.items, region, -1, log);
 
   await Order.updateOne(
     { _id: orderId },
@@ -256,4 +261,20 @@ export async function toggleCoupon(id: string, active: boolean): Promise<ActionR
   await logActivity(admin, active ? "coupon.enable" : "coupon.pause", { target: c.code, targetId: id });
   revalidatePath("/admin/coupons");
   return { ok: true, message: active ? "Coupon enabled." : "Coupon paused." };
+}
+
+/** Orders list bulk action: move several orders to one status (each checked and logged like a single change). */
+export async function bulkUpdateOrderStatus(orderIds: string[], status: string): Promise<ActionResult> {
+  if (!(await staffCan("orders.manage"))) return denied("change order status");
+  const ids = [...new Set((Array.isArray(orderIds) ? orderIds : []).filter(validId))].slice(0, 100);
+  if (!ids.length) return { ok: false, error: "Tick at least one order." };
+  let done = 0;
+  const failed: string[] = [];
+  for (const id of ids) {
+    const res = await updateOrderStatus(id, status, "Bulk update from the orders list");
+    if (res.ok) done++;
+    else failed.push(res.error);
+  }
+  if (!done) return { ok: false, error: failed[0] ?? "No orders were changed." };
+  return { ok: true, message: `${done} order${done === 1 ? "" : "s"} updated${failed.length ? `; ${failed.length} skipped` : ""}.` };
 }

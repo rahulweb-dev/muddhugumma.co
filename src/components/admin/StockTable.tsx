@@ -6,7 +6,17 @@ import { useRouter } from "next/navigation";
 import { saveStockChanges, transferStock, type StockChange } from "@/lib/actions/stock";
 import type { Region } from "@/lib/region";
 
-export type StockRow = { id: string; name: string; slug: string; image: string; freeSize: boolean; active: boolean; stock: Partial<Record<Region, Record<string, number>>> };
+export type StockRow = {
+  id: string;
+  name: string;
+  slug: string;
+  image: string;
+  freeSize: boolean;
+  active: boolean;
+  stock: Partial<Record<Region, Record<string, number>>>;
+  /** Soonest size to sell out at the recent pace (null: no sales in 30 days), and pieces to add to cover 30 days. */
+  forecast?: Partial<Record<Region, { days: number; size: string; restock: number } | null>>;
+};
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 const UK_SIZE: Record<string, string> = { XS: "6", S: "8", M: "10", L: "12", XL: "14", XXL: "16" };
@@ -81,6 +91,7 @@ export function StockTable({ rows, regions, threshold }: { rows: StockRow[]; reg
               ))}
               <th className="num">Free size</th>
               <th className="num">Total</th>
+              <th>Sells out in</th>
             </tr>
           </thead>
           <tbody>
@@ -133,6 +144,19 @@ export function StockTable({ rows, regions, threshold }: { rows: StockRow[]; reg
                       {row.freeSize ? SIZES.map((s) => <td key={s} className="num muted">–</td>) : SIZES.map((s) => cell(s))}
                       {row.freeSize ? cell("Free size") : <td className="num muted">–</td>}
                       <td className="num"><b>{total}</b></td>
+                      <td className="nowrap">
+                        {(() => {
+                          const f = row.forecast?.[r];
+                          if (!f) return <small className="muted">No sales in 30 days</small>;
+                          const tone = f.days <= 7 ? "dash-down" : f.days <= 21 ? "stock-soon" : "dash-up";
+                          return (
+                            <>
+                              <span className={tone}>{f.days === 0 ? "Sold out" : `~${f.days} day${f.days === 1 ? "" : "s"}`}</span>
+                              <small className="muted block">{f.size !== "Free size" ? `size ${f.size}` : ""}{f.restock ? `${f.size !== "Free size" ? " · " : ""}add ~${f.restock}` : ""}</small>
+                            </>
+                          );
+                        })()}
+                      </td>
                     </tr>
                   );
                 })}

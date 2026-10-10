@@ -69,8 +69,14 @@ export function ProductCard({ p, priority = false, compare = true, bag = false }
   const wished = isWished(p.slug);
   const sizes = sizesFor(p.freeSize, region);
   const inStock = (s: string) => (p.stock[canonicalSize(s)] ?? 0) > 0;
+  // The hover size picker is a mouse-only extra: build it on first hover / keyboard focus, so phones never pay for it.
+  const [quick, setQuick] = useState(false);
   return (
-    <article className={`pc${bag ? " has-bag" : ""}`}>
+    <article
+      className={`pc${bag ? " has-bag" : ""}`}
+      onPointerEnter={quick ? undefined : (e) => e.pointerType === "mouse" && setQuick(true)}
+      onFocus={quick ? undefined : () => setQuick(true)}
+    >
       <div className="ph">
         <Image className="main" src={p.images[0]} alt={p.name} fill sizes="(min-width:900px) 25vw, 50vw" priority={priority} />
         {p.images[1] && <Image className="alt" src={p.images[1]} alt="" fill sizes="(min-width:900px) 25vw, 50vw" />}
@@ -85,6 +91,7 @@ export function ProductCard({ p, priority = false, compare = true, bag = false }
         <button className="wish" aria-label={wished ? `Remove ${p.name} from wishlist` : `Save ${p.name} to wishlist`} aria-pressed={wished} onClick={() => toggleWish(p.slug, "")}>
           <Icon name="heart" />
         </button>
+        {quick && (
         <div className="sizes">
           <small>Quick add · select size</small>
           <div>
@@ -100,6 +107,7 @@ export function ProductCard({ p, priority = false, compare = true, bag = false }
             ))}
           </div>
         </div>
+        )}
       </div>
       <Link className="meta" href={href}>
         <span className="brand">Muddhugumma</span>

@@ -6,6 +6,7 @@ import { stockFor, stockPath } from "./stock";
 import { issueGiftCard } from "./giftcards";
 import { logActivity } from "./audit";
 import { onReturnUpdated, STORE_CREDIT_NOTE } from "./order-events";
+import { logStockMoves } from "./stock-log";
 
 /* Returns & exchanges shared logic. Owner: comms & accounts. Admin pages (content & service) call updateReturnStatus. */
 
@@ -264,8 +265,11 @@ const STEP: Record<ReturnStatus, number> = { requested: 0, approved: 1, pickup_s
 const FINAL = new Set<ReturnStatus>(["refunded", "exchanged", "rejected"]);
 
 /** Returned pieces go back into (exchanges come out of) the stock of the country the order was sold in. */
-const restock = (region: Region, items: ReturnDoc["items"], pick: (i: ReturnDoc["items"][number]) => string | undefined, sign: 1 | -1) =>
-  Promise.all(
+const restock = async (region: Region, items: ReturnDoc["items"], pick: (i: ReturnDoc["items"][number]) => string | undefined, sign: 1 | -1, number = "") => {
+  await logStockMoves(
+    items.map((it) => ({ slug: it.slug, name: it.name, region, size: canonicalSize(pick(it) ?? ""), change: sign * Math.max(0, Math.floor(Number(it.qty) || 0)), reason: sign > 0 ? "return_received" : "exchange_sent", note: number ? `Return ${number}` : "" }))
+  );
+  return Promise.all(
     items.map((it) => {
       const size = canonicalSize(pick(it) ?? "").replace(/[.$]/g, "");
       const qty = Math.max(0, Math.floor(Number(it.qty) || 0));
@@ -273,6 +277,7 @@ const restock = (region: Region, items: ReturnDoc["items"], pick: (i: ReturnDoc[
       return Product.updateOne({ slug: it.slug }, { $inc: { [stockPath(region, size)]: sign * qty } });
     })
   );
+};
 
 /** Moves a return to a new status (restock on "received", store-credit gift card on "refunded"), logs history, notifies the customer. */
 export async function updateReturnStatus(
@@ -336,9 +341,9 @@ export async function updateReturnStatus(
     if (!res.modifiedCount) return { ok: false, error: "Someone else just updated this return. Refresh and try again." };
 
     const everReceived = (rt.history ?? []).some((h) => h.status === "received");
-    if (status === "received" && !everReceived) await restock(rt.region, rt.items, (i) => i.size, 1);
+    if (status === "received" && !everReceived) await restock(rt.region, rt.items, (i) => i.size, 1, rt.number);
     // The replacement size leaves the studio when the exchange is completed.
-    if (status === "exchanged") await restock(rt.region, rt.items.filter((i) => i.kind === "exchange"), (i) => i.exchangeSize, -1);
+    if (status === "exchanged") await restock(rt.region, rt.items.filter((i) => i.kind === "exchange"), (i) => i.exchangeSize, -1, rt.number);
 
     await logActivity(actor, "return.status", { target: rt.number, meta: { from: rt.status, to: status, giftCard: giftCode || undefined } });
     await onReturnUpdated(returnNumber);

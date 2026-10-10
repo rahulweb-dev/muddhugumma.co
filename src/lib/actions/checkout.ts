@@ -28,6 +28,7 @@ import { findUsableGiftCard, redeemGiftCard, restoreGiftCardForOrder } from "@/l
 import { reverseLoyaltyForOrder, spendPoints, unspendPoints } from "@/lib/loyalty";
 import { hasVerifiedOtp, otpDeliverable } from "@/lib/otp";
 import { onOrderPaid, onOrderPlaced } from "@/lib/order-events";
+import { logStockMoves } from "@/lib/stock-log";
 
 /* ---------- coupons ---------- */
 
@@ -439,6 +440,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     if (card) await refundCard(card.code, t.giftCard, number);
     return { ok: false, error: "We couldn't place your order. Nothing was charged; please try again." };
   }
+
+  /* Stock history: what this sale took off the shelf. */
+  await logStockMoves(lines.map((l) => ({ productId: String(l.doc._id), slug: l.doc.slug, name: l.item.name, region, size: l.key, change: -l.item.qty, reason: "sale", note: `Order ${number}` })));
 
   /* Save a new address to the account. */
   if (session && data.saveAddress) {

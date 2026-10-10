@@ -8,13 +8,14 @@ import { canonicalSize } from "@/lib/region";
 import { stockPath } from "@/lib/stock";
 import { onOrderStatusChanged } from "@/lib/order-events";
 import type { ActionState } from "@/lib/actions/auth";
+import { logStockMoves } from "@/lib/stock-log";
 
 const CANCELLABLE = ["placed", "confirmed"];
 
 type CancelledOrder = {
   region?: "in" | "uk";
   payment?: { method?: string; status?: string };
-  items?: { productId?: string; slug?: string; size?: string; qty?: number }[];
+  items?: { productId?: string; slug?: string; name?: string; size?: string; qty?: number }[];
 };
 
 /** Customer cancels their own order while it has not been packed. Restocks every line. */
@@ -47,6 +48,9 @@ export async function cancelOrder(number: string, _prev?: ActionState, _form?: F
       const filter = it.productId && mongoose.isValidObjectId(it.productId) ? { _id: it.productId } : { slug: it.slug };
       return Product.updateOne(filter, { $inc: { [stockPath(order.region === "uk" ? "uk" : "in", size)]: qty } });
     })
+  );
+  await logStockMoves(
+    (order.items ?? []).map((it) => ({ productId: it.productId, slug: it.slug, name: it.name, region: order.region === "uk" ? "uk" : "in", size: canonicalSize(String(it.size || "")), change: Math.max(0, Math.floor(Number(it.qty) || 0)), reason: "order_cancelled", note: `Order ${number} cancelled by the customer` }))
   );
   // Cancellation email, give back redeemed points and gift-card balance.
   await onOrderStatusChanged(number, "cancelled");

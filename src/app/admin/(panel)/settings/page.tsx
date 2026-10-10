@@ -33,6 +33,10 @@ function integrations(): Integration[] {
       }
     : { name: "Cashfree (India payments)", state: "test", note: "No keys: India online payments are simulated." };
 
+  const shiprocket: Integration = set("SHIPROCKET_EMAIL", "SHIPROCKET_PASSWORD")
+    ? { name: "Shiprocket (India couriers)", state: "live", note: `One-click booking on India orders.${process.env.SHIPROCKET_WEBHOOK_TOKEN ? "" : " Webhook token missing: add tracking updates by hand."}` }
+    : { name: "Shiprocket (India couriers)", state: "off", note: "Not connected: add courier and tracking numbers by hand." };
+
   const stripe: Integration = stripeKey
     ? {
         name: "Stripe (UK payments)",
@@ -45,6 +49,7 @@ function integrations(): Integration[] {
     imagekit,
     cashfree,
     stripe,
+    shiprocket,
     {
       name: "Email (Resend)",
       state: mm.email === "live" ? "live" : "test",

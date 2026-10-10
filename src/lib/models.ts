@@ -69,6 +69,7 @@ const UserSchema = schema(
     phone: { type: String, default: "" },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["customer", "admin", "manager", "packer", "stylist"], default: "customer" },
+    storeLock: { type: String, enum: ["", "in", "uk"], default: "" }, // staff only: limit the admin to one country
     addresses: { type: [AddressSchema], default: [] },
     wishlist: { type: [String], default: [] }, // product slugs
     birthday: { type: String, default: "" }, // "MM-DD"
@@ -323,9 +324,10 @@ const StockLogSchema = schema(
     name: String,
     region: { type: String, enum: ["in", "uk"] },
     size: String,
-    from: Number,
+    from: Number, // manual edits know the before / after counts
     to: Number,
-    reason: { type: String, enum: ["restock", "sold_offline", "damaged", "correction", "transfer"] },
+    change: Number, // pieces added (+) or taken (−); automatic moves only know this
+    reason: { type: String, enum: ["restock", "sold_offline", "damaged", "correction", "transfer", "sale", "order_cancelled", "order_reopened", "return_received", "exchange_sent"] },
     note: { type: String, default: "" },
     byId: String,
     byName: String,
@@ -463,7 +465,7 @@ export type ProductDoc = Stamps & {
 
 export type CartItemDoc = { slug: string; size: string; qty: number; options?: { blouse?: string; fallPico?: boolean } };
 export type UserDoc = Stamps & {
-  name: string; email: string; phone?: string; passwordHash: string; role: UserRole;
+  name: string; email: string; phone?: string; passwordHash: string; role: UserRole; storeLock?: "" | "in" | "uk";
   addresses: AddressDoc[]; wishlist: string[];
   birthday?: string; marketingOptIn?: boolean; whatsappOptIn?: boolean; loyaltyPoints?: number; referralCode?: string; referredBy?: string;
   measurements?: { bust?: number; waist?: number; hip?: number; height?: number; usualSize?: string; brandSizes?: Map<string, string> | Record<string, string> };
@@ -540,8 +542,8 @@ export type ReturnDoc = Stamps & {
   status: ReturnStatus; refundAmount: number; refundMethod: "original" | "store_credit" | "bank";
   pickup?: { courier?: string; awb?: string; date?: Date }; comments?: string; history: { status: string; at: Date; note?: string }[];
 };
-export type StockReason = "restock" | "sold_offline" | "damaged" | "correction" | "transfer";
-export type StockLogDoc = Stamps & { productId: string; slug: string; name: string; region: RegionKey; size: string; from: number; to: number; reason: StockReason; note?: string; byId?: string; byName?: string };
+export type StockReason = "restock" | "sold_offline" | "damaged" | "correction" | "transfer" | "sale" | "order_cancelled" | "order_reopened" | "return_received" | "exchange_sent";
+export type StockLogDoc = Stamps & { productId: string; slug: string; name: string; region: RegionKey; size: string; from?: number; to?: number; change?: number; reason: StockReason; note?: string; byId?: string; byName?: string };
 export type StockAlertDoc = Stamps & { productSlug: string; size: string; email: string; region: string; notifiedAt?: Date };
 export type GiftCardDoc = Stamps & {
   code: string; region: RegionKey; initial: number; balance: number; purchaserEmail?: string; recipientName?: string; recipientEmail?: string;

@@ -28,7 +28,8 @@
 @layer base {
   :root{
     --paper:var(--color-paper); --stone:var(--color-stone); --stone-2:var(--color-stone-2); --ink:var(--color-ink); --muted:var(--color-muted); --line:var(--color-line);
-    --bronze:var(--color-bronze); --cocoa:var(--color-cocoa); --sale:var(--color-sale); --ok:var(--color-ok); --on:#FFFFFF;
+    /* --bronze-ink: the brand bronze, deepened for small text and white-on-bronze buttons (≥4.5:1 contrast) */
+    --bronze:var(--color-bronze); --bronze-ink:#7E5D38; --cocoa:var(--color-cocoa); --sale:var(--color-sale); --ok:var(--color-ok); --on:#FFFFFF;
     --display:var(--font-display); --body:var(--font-body); --serif:var(--font-serif); --script:var(--font-script);
     --gutter:16px; --head-h:72px;
     color-scheme:light;
@@ -52,7 +53,7 @@
 @layer components {
   .pad{padding-inline:var(--gutter)}
   .wrap{max-width:1440px; margin-inline:auto}
-  .kick{font-size:11px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--bronze)}
+  .kick{font-size:11px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--bronze-ink)}
   .h1{font-family:var(--display); font-weight:400; text-transform:uppercase; letter-spacing:.06em; font-size:clamp(26px,4.4vw,48px); line-height:1.1; margin:0; text-wrap:balance}
   .h2{font-family:var(--display); font-weight:400; text-transform:uppercase; letter-spacing:.08em; font-size:clamp(20px,2.6vw,30px); line-height:1.2; margin:0; text-wrap:balance}
   .h1 i,.h2 i{font-family:var(--serif); text-transform:none; letter-spacing:0; font-size:1.22em; color:var(--bronze)}
@@ -64,8 +65,8 @@
   .btn:hover{background:transparent; color:var(--ink)}
   .btn.ghost{background:transparent; color:var(--ink)}
   .btn.ghost:hover{background:var(--ink); color:var(--on)}
-  .btn.bronze{background:var(--bronze); border-color:var(--bronze)}
-  .btn.bronze:hover{background:transparent; color:var(--bronze)}
+  .btn.bronze{background:var(--bronze-ink); border-color:var(--bronze-ink)}
+  .btn.bronze:hover{background:transparent; color:var(--bronze-ink)}
   .btn.light{background:var(--paper); color:var(--ink); border-color:var(--paper)}
   .btn.block{width:100%}
   .btn[disabled],.btn[aria-disabled="true"]{opacity:.45; pointer-events:none}
@@ -315,7 +316,7 @@
   .chip svg{width:12px; height:12px}
   .status{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:3px 9px; border-radius:99px; background:var(--stone)}
   .status::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
-  .status.placed,.status.confirmed{color:var(--bronze)}
+  .status.placed,.status.confirmed{color:var(--bronze-ink)}
   .status.packed,.status.shipped{color:#2E4E7A}
   .status.delivered,.status.paid{color:var(--ok)}
   .status.cancelled,.status.returned,.status.failed{color:var(--sale)}

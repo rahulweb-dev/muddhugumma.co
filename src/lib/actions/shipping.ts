@@ -8,6 +8,8 @@ import { logActivity } from "@/lib/audit";
 import { onOrderStatusChanged } from "@/lib/order-events";
 import { Order } from "@/lib/models";
 import { COURIERS, TRACKING_CODES, type TrackingCode } from "@/lib/shipping";
+import { codToCollect, type LeanOrder } from "@/lib/admin-data";
+import { bookShipment, shiprocketConfigured } from "@/lib/shiprocket";
 import { findTrackableOrder, recordShipment, recordTrackingEvent, removeTrackingEvent, type PublicTracking, type TrackingResult } from "@/lib/tracking";
 
 const ADMIN_TZ = process.env.ADMIN_TIMEZONE || "Asia/Kolkata";
@@ -143,4 +145,41 @@ export async function lookupTracking(_prev: TrackLookupState, form: FormData): P
   await new Promise((r) => setTimeout(r, 400));
   const data = await findTrackableOrder(number, contact);
   return data ? { status: "found", data } : { status: "notfound", number, contact };
+}
+
+/** One click: book the parcel with Shiprocket (India orders), save the AWB as the shipment, and return the label link. */
+export async function bookWithShiprocket(orderId: string): Promise<TrackingResult & { labelUrl?: string }> {
+  const admin = await staffCan("orders.ship");
+  if (!admin) return NO_SHIP;
+  if (!mongoose.isValidObjectId(orderId)) return { ok: false, error: "Unknown order." };
+  if (!shiprocketConfigured()) return { ok: false, error: "Shiprocket isn't connected yet. Add SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in Vercel." };
+  await db();
+  const o = await Order.findById(orderId).lean<LeanOrder & { shipment?: { awb?: string } }>();
+  if (!o) return { ok: false, error: "Unknown order." };
+  if (o.region === "uk") return { ok: false, error: "Shiprocket booking is for India orders. Add the UK courier and tracking number by hand." };
+  if (!["confirmed", "packed"].includes(o.status)) return { ok: false, error: "Only orders that are confirmed or packed can be booked." };
+  if (o.shipment?.awb) return { ok: false, error: "This order already has a tracking number." };
+  try {
+    const booked = await bookShipment({
+      number: o.number,
+      createdAt: new Date(o.createdAt ?? Date.now()),
+      email: o.email,
+      address: o.address ?? {},
+      items: o.items.map((i) => ({ name: i.name ?? "Item", slug: i.slug, size: i.size, qty: i.qty ?? 1, unitPrice: i.unitPrice ?? 0, optionsPrice: i.optionsPrice ?? 0 })),
+      total: o.total ?? 0,
+      collect: codToCollect(o),
+    });
+    const res = await recordShipment({ _id: orderId }, { courier: "shiprocket", awb: booked.awb.toUpperCase(), shippedAt: new Date(), provider: "shiprocket", providerRef: booked.shipmentId }, admin.name);
+    if (!res.ok) return res;
+    await logActivity(admin, "order.ship", { target: o.number, targetId: orderId, meta: { courier: `shiprocket:${booked.courier}`, awb: booked.awb } });
+    refresh(orderId);
+    return {
+      ok: true,
+      message: `Booked with ${booked.courier}, AWB ${booked.awb}.${booked.pickup ? " Pickup requested." : " Request the pickup in Shiprocket."}${booked.labelUrl ? " Print the label from the link." : ""}`,
+      labelUrl: booked.labelUrl,
+    };
+  } catch (e) {
+    console.error("[shiprocket]", e);
+    return { ok: false, error: e instanceof Error ? e.message : "Shiprocket booking failed." };
+  }
 }
